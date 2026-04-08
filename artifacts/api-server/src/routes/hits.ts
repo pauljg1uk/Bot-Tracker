@@ -6,6 +6,36 @@ import { auth } from "./auth";
 
 const router = Router();
 
+// ── In-memory title cache ──────────────────────────────────────────────────
+const titleCache = new Map<string, { title: string | null; ts: number }>();
+
+router.get("/page-title", auth, async (req, res) => {
+  const url = req.query.url as string;
+  if (!url) { res.json({ title: null }); return; }
+
+  const cached = titleCache.get(url);
+  if (cached && Date.now() - cached.ts < 3_600_000) {
+    res.json({ title: cached.title });
+    return;
+  }
+
+  try {
+    const response = await fetch(url, {
+      signal: AbortSignal.timeout(6000),
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; BotTracker/1.0; +https://bottracker.app)" },
+    });
+    const html = await response.text();
+    const match = html.match(/<title[^>]*>([^<]{1,200})<\/title>/i);
+    const title = match ? match[1].trim().replace(/\s+/g, " ") : null;
+    titleCache.set(url, { title, ts: Date.now() });
+    res.json({ title });
+  } catch {
+    titleCache.set(url, { title: null, ts: Date.now() });
+    res.json({ title: null });
+  }
+});
+
+// ── POST /api/hit ──────────────────────────────────────────────────────────
 router.post("/hit", async (req, res) => {
   const { api_key, url, bot_name, user_agent, status_code, country, referrer } =
     req.body as {
@@ -46,6 +76,7 @@ router.post("/hit", async (req, res) => {
   }
 });
 
+// ── GET /api/stats/:clientId ───────────────────────────────────────────────
 router.get("/stats/:clientId", auth, async (req, res) => {
   const clientId = parseInt(req.params.clientId);
   const days = parseInt((req.query.days as string) || "7");
@@ -86,9 +117,7 @@ router.get("/stats/:clientId", auth, async (req, res) => {
       .groupBy(botHitsTable.bot_name);
 
     const prevBotMap: Record<string, number> = {};
-    byBotPrev.forEach((b) => {
-      prevBotMap[b.bot_name] = Number(b.hits);
-    });
+    byBotPrev.forEach((b) => { prevBotMap[b.bot_name] = Number(b.hits); });
 
     const byBot = byBotRaw.map((b) => ({
       bot_name: b.bot_name,
@@ -103,7 +132,7 @@ router.get("/stats/:clientId", auth, async (req, res) => {
       .where(sql`${botHitsTable.client_id} = ${clientId} AND ${botHitsTable.timestamp} > ${since}`)
       .groupBy(botHitsTable.url)
       .orderBy(desc(count()))
-      .limit(10);
+      .limit(20);
 
     const topUrls = topPagesRaw.map((p) => p.url);
 
@@ -138,9 +167,7 @@ router.get("/stats/:clientId", auth, async (req, res) => {
       .groupBy(botHitsTable.url);
 
     const prevPageMap: Record<string, number> = {};
-    topPagesPrev.forEach((p) => {
-      prevPageMap[p.url] = Number(p.hits);
-    });
+    topPagesPrev.forEach((p) => { prevPageMap[p.url] = Number(p.hits); });
 
     const topPages = topPagesRaw.map((p) => ({
       url: p.url,
@@ -172,6 +199,7 @@ router.get("/stats/:clientId", auth, async (req, res) => {
   }
 });
 
+// ── GET /api/hits/:clientId ────────────────────────────────────────────────
 router.get("/hits/:clientId", auth, async (req, res) => {
   const clientId = parseInt(req.params.clientId);
   const days = parseInt((req.query.days as string) || "7");

@@ -153,6 +153,49 @@
     .pattern-name { font-size: 13px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .pattern-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
 
+    /* ── PAGES VIEW ── */
+    #pages-view { display: none; }
+    .pv-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+    .pv-back { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--muted); font-size: 13px; font-weight: 500; font-family: inherit; cursor: pointer; transition: all 0.15s; }
+    .pv-back:hover { color: var(--text); border-color: var(--border2); }
+    .pv-title { font-size: 18px; font-weight: 700; letter-spacing: -0.02em; flex: 1; }
+    .pv-sub { font-size: 13px; color: var(--muted); }
+    .pv-filters { display: flex; align-items: center; gap: 8px; }
+    .pv-bot-filter { background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 7px 12px; border-radius: 8px; font-size: 13px; font-family: inherit; outline: none; cursor: pointer; }
+    .pv-bot-filter:focus { border-color: var(--green); }
+
+    /* horizontal rank bar chart */
+    .rank-chart { margin-bottom: 20px; }
+    .rank-bar-row { display: flex; align-items: center; gap: 10px; padding: 5px 0; }
+    .rank-num { font-size: 11px; font-weight: 700; color: var(--muted2); width: 18px; text-align: right; flex-shrink: 0; }
+    .rank-bar-track { flex: 1; height: 22px; background: var(--surface2); border-radius: 6px; overflow: hidden; position: relative; }
+    .rank-bar-fill { height: 100%; border-radius: 6px; display: flex; align-items: center; padding: 0 10px; transition: width 0.5s ease; min-width: 40px; }
+    .rank-bar-label { font-size: 11px; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 2px rgba(0,0,0,0.25); }
+    .rank-bar-count { font-size: 11px; font-weight: 700; color: var(--muted); flex-shrink: 0; width: 50px; text-align: right; }
+
+    /* pages table */
+    .pg-table { width: 100%; border-collapse: collapse; }
+    .pg-table th { text-align: left; padding: 8px 12px; font-size: 10px; font-weight: 600; color: var(--muted2); text-transform: uppercase; letter-spacing: 0.07em; border-bottom: 1px solid var(--border); white-space: nowrap; }
+    .pg-table td { padding: 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    .pg-table tr:last-child td { border: none; }
+    .pg-table tr:hover td { background: rgba(74,125,99,0.04); }
+    .pg-rank { font-size: 15px; font-weight: 700; color: var(--muted2); width: 28px; text-align: center; }
+    .pg-move { width: 44px; text-align: center; }
+    .move-badge { display: inline-flex; align-items: center; gap: 2px; font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 20px; }
+    .move-up { color: var(--green-text); background: var(--green-bg); }
+    .move-down { color: var(--red); background: var(--red-bg); }
+    .move-same { color: var(--muted2); background: var(--surface2); }
+    .move-new { color: #6b4fbb; background: #f0ebff; }
+    .pg-title-cell { }
+    .pg-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
+    .pg-title.loading { color: var(--muted2); font-style: italic; font-weight: 400; }
+    .pg-url-link { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-family: 'SF Mono', 'Fira Code', monospace; color: var(--green-text); text-decoration: none; }
+    .pg-url-link:hover { text-decoration: underline; }
+    .pg-url-link svg { width: 10px; height: 10px; flex-shrink: 0; }
+    .pg-hits-cell { font-size: 14px; font-weight: 700; text-align: right; white-space: nowrap; }
+    .pg-hits-sub { font-size: 11px; color: var(--muted); font-weight: 400; }
+    .pg-bots-cell { }
+
     /* ── MISC ── */
     .empty { color: var(--muted); font-size: 13px; padding: 28px 0; text-align: center; }
     #no-client { color: var(--muted); padding: 80px 0; font-size: 14px; text-align: center; }
@@ -291,7 +334,7 @@
         <div class="panel" style="margin-bottom:0">
           <div class="panel-header">
             <span class="panel-title">Top Pages</span>
-            <span style="font-size:12px;color:var(--muted)">URL · bots · hits</span>
+            <button onclick="openPagesView()" style="background:none;border:none;font-size:12px;color:var(--green-text);font-weight:600;cursor:pointer;font-family:inherit;padding:0">View all →</button>
           </div>
           <div style="display:grid;grid-template-columns:1fr 80px 120px 70px;gap:12px;padding-bottom:8px;border-bottom:1px solid var(--border);margin-bottom:2px">
             <span style="font-size:10px;font-weight:600;color:var(--muted2);text-transform:uppercase;letter-spacing:.07em">URL</span>
@@ -333,6 +376,59 @@
       </div>
 
     </div><!-- /dashboard -->
+
+    <!-- PAGES VIEW -->
+    <div id="pages-view">
+      <div class="pv-header">
+        <button class="pv-back" onclick="closePagesView()">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+          Dashboard
+        </button>
+        <div>
+          <div class="pv-title" id="pv-title">Pages Analysis</div>
+          <div class="pv-sub" id="pv-sub"></div>
+        </div>
+        <div class="pv-filters" style="margin-left:auto">
+          <span style="font-size:12px;color:var(--muted);font-weight:500">Filter by bot:</span>
+          <select class="pv-bot-filter" id="pv-bot-select" onchange="applyPageBotFilter()">
+            <option value="">All Bots</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Horizontal rank chart -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Hit Distribution</span>
+          <span id="pv-chart-label" style="font-size:12px;color:var(--muted)"></span>
+        </div>
+        <div class="rank-chart" id="pv-rank-chart"></div>
+      </div>
+
+      <!-- Full pages table -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">All Pages</span>
+          <span id="pv-table-label" style="font-size:12px;color:var(--muted)"></span>
+        </div>
+        <div class="scroll-table">
+          <table class="pg-table">
+            <thead>
+              <tr>
+                <th style="width:36px">#</th>
+                <th style="width:52px">Move</th>
+                <th>Page</th>
+                <th style="text-align:right">Hits</th>
+                <th>Bots</th>
+                <th style="width:80px">Trend</th>
+              </tr>
+            </thead>
+            <tbody id="pv-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div><!-- /pages-view -->
+
   </div><!-- /main -->
 </div><!-- /app -->
 
@@ -389,6 +485,11 @@
   let password = '';
   let activeDays = 7;
   let _currentApiKey = null;
+  let _clientsMap = {};       // id → {name, domain}
+  let _pagesData = [];        // full topPages from last stats fetch
+  let _botsData = [];         // full byBot from last stats fetch
+  let _activePvBot = '';      // bot name filter in pages view
+  let _clientDomain = '';     // domain of currently selected client
 
   // ── BOT COLOR PALETTE ──
   const BOT_COLORS = {
@@ -446,10 +547,19 @@
   }
 
   // ── CLIENTS ──
+  function normaliseDomain(raw) {
+    let d = (raw || '').trim();
+    if (!d) return '';
+    if (!d.startsWith('http')) d = 'https://' + d;
+    return d.replace(/\/$/, '');
+  }
+
   function loadClients() {
     fetch('/api/clients', { headers: authHeaders() })
       .then(r => r.json())
       .then(clients => {
+        _clientsMap = {};
+        clients.forEach(c => { _clientsMap[c.id] = c; });
         const sel = document.getElementById('client-select');
         const cur = sel.value;
         sel.innerHTML = '<option value="">Select client…</option>';
@@ -473,11 +583,14 @@
     }
     document.getElementById('dashboard').style.display = 'block';
     document.getElementById('no-client').style.display = 'none';
+    _clientDomain = normaliseDomain((_clientsMap[clientId] || {}).domain);
 
     Promise.all([
       fetch('/api/stats/' + clientId + '?days=' + activeDays, { headers: authHeaders() }).then(r => r.json()),
       fetch('/api/hits/' + clientId + '?days=' + activeDays, { headers: authHeaders() }).then(r => r.json())
     ]).then(([stats, hits]) => {
+      _pagesData = stats.topPages || [];
+      _botsData = stats.byBot || [];
       renderKPIs(stats);
       renderChart(stats.overTime, activeDays);
       renderBotRoster(stats.byBot, stats.total);
@@ -704,6 +817,169 @@
       </div>`;
     }
     el.innerHTML = html;
+  }
+
+  // ── PAGES VIEW ──
+  function openPagesView() {
+    if (!_pagesData.length) return;
+    document.getElementById('dashboard').style.display = 'none';
+    document.getElementById('pages-view').style.display = 'block';
+    window.scrollTo(0, 0);
+
+    const clientId = document.getElementById('client-select').value;
+    const clientName = (_clientsMap[clientId] || {}).name || 'Client';
+    const periodLabel = { 1: 'last 24h', 3: 'last 3 days', 7: 'last 7 days', 30: 'last 30 days' }[activeDays] || '';
+    document.getElementById('pv-title').textContent = clientName + ' — Pages';
+    document.getElementById('pv-sub').textContent = _pagesData.length + ' pages · ' + periodLabel;
+
+    const botSel = document.getElementById('pv-bot-select');
+    botSel.innerHTML = '<option value="">All Bots</option>';
+    _botsData.forEach(b => {
+      const o = document.createElement('option');
+      o.value = b.bot_name;
+      o.textContent = b.bot_name + ' (' + b.hits.toLocaleString() + ' hits)';
+      botSel.appendChild(o);
+    });
+    botSel.value = _activePvBot;
+
+    renderPagesView(_pagesData, _activePvBot);
+  }
+
+  function closePagesView() {
+    document.getElementById('pages-view').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+    _activePvBot = '';
+  }
+
+  function applyPageBotFilter() {
+    _activePvBot = document.getElementById('pv-bot-select').value;
+    renderPagesView(_pagesData, _activePvBot);
+  }
+
+  function renderPagesView(allPages, botFilter) {
+    // If bot filter active, filter and recalculate hits from that bot only
+    let pages = allPages;
+    if (botFilter) {
+      pages = allPages
+        .map(p => {
+          const botEntry = (p.bots || []).find(b => b.bot_name === botFilter);
+          if (!botEntry) return null;
+          return { ...p, hits: botEntry.hits, bots: p.bots };
+        })
+        .filter(Boolean)
+        .sort((a, b) => b.hits - a.hits);
+    }
+
+    const totalFiltered = pages.reduce((s, p) => s + p.hits, 0);
+    const label = botFilter ? botFilter + ' only' : 'all bots';
+    document.getElementById('pv-chart-label').textContent = pages.length + ' pages · ' + label;
+    document.getElementById('pv-table-label').textContent = totalFiltered.toLocaleString() + ' total hits';
+
+    // Compute previous ranks (from previous_hits, ignoring filtered)
+    const prevRankMap = {};
+    if (!botFilter) {
+      const sortedByPrev = [...allPages].filter(p => p.previous_hits > 0).sort((a,b) => b.previous_hits - a.previous_hits);
+      sortedByPrev.forEach((p, i) => { prevRankMap[p.url] = i + 1; });
+    }
+
+    renderPvChart(pages, botFilter);
+    renderPvTable(pages, prevRankMap, botFilter);
+    loadPageTitles(pages);
+  }
+
+  function renderPvChart(pages, botFilter) {
+    const chart = document.getElementById('pv-rank-chart');
+    if (!pages.length) { chart.innerHTML = '<div class="empty">No pages found</div>'; return; }
+    const maxHits = pages[0].hits;
+    chart.innerHTML = pages.slice(0, 12).map((p, i) => {
+      const topBot = botFilter || ((p.bots || [])[0] || {}).bot_name || '';
+      const color = topBot ? botColor(topBot) : 'var(--green)';
+      const pct = maxHits > 0 ? Math.max(8, Math.round((p.hits / maxHits) * 100)) : 8;
+      const displayName = p.url === '/' ? 'Home' : p.url.replace(/^\//, '').replace(/-/g, ' ').replace(/\//g, ' › ');
+      return `<div class="rank-bar-row">
+        <span class="rank-num">${i + 1}</span>
+        <div class="rank-bar-track">
+          <div class="rank-bar-fill" style="width:${pct}%;background:${color}">
+            <span class="rank-bar-label">${escHtml(displayName)}</span>
+          </div>
+        </div>
+        <span class="rank-bar-count">${p.hits.toLocaleString()}</span>
+      </div>`;
+    }).join('');
+  }
+
+  function moveBadge(currentRank, previousRank, isNew) {
+    if (isNew) return '<span class="move-badge move-new">New</span>';
+    if (!previousRank) return '<span class="move-badge move-same">—</span>';
+    const diff = previousRank - currentRank;
+    if (diff > 0) return `<span class="move-badge move-up">↑${diff}</span>`;
+    if (diff < 0) return `<span class="move-badge move-down">↓${Math.abs(diff)}</span>`;
+    return '<span class="move-badge move-same">—</span>';
+  }
+
+  function renderPvTable(pages, prevRankMap, botFilter) {
+    const tbody = document.getElementById('pv-table-body');
+    if (!pages.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="empty">No pages for this filter</td></tr>';
+      return;
+    }
+    tbody.innerHTML = pages.map((p, i) => {
+      const rank = i + 1;
+      const isNew = !botFilter && p.previous_hits === 0;
+      const prevRank = prevRankMap[p.url] || null;
+      const move = moveBadge(rank, prevRank, isNew);
+      const fullUrl = _clientDomain ? _clientDomain + p.url : p.url;
+      const topBots = (p.bots || []).slice(0, 4);
+      const botBadges = topBots.map(b => {
+        const c = botColor(b.bot_name);
+        return `<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:500;padding:2px 6px;border-radius:10px;background:${c}18;color:${c};border:1px solid ${c}30;white-space:nowrap;margin:1px">
+          <span style="width:5px;height:5px;border-radius:50%;background:${c};flex-shrink:0"></span>${escHtml(b.bot_name.replace('Bot','').replace('-Extended',''))} ${b.hits}
+        </span>`;
+      }).join('');
+      return `<tr>
+        <td class="pg-rank">${rank}</td>
+        <td class="pg-move">${move}</td>
+        <td class="pg-title-cell">
+          <div class="pg-title loading" id="title-${i}" data-url="${escHtml(fullUrl)}">Loading…</div>
+          <a href="${escHtml(fullUrl)}" target="_blank" rel="noopener" class="pg-url-link">
+            ${escHtml(p.url)}
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 19H5V5h7V3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></svg>
+          </a>
+        </td>
+        <td class="pg-hits-cell">
+          ${p.hits.toLocaleString()}
+          ${!botFilter && p.previous_hits > 0 ? `<div class="pg-hits-sub">prev: ${p.previous_hits.toLocaleString()}</div>` : ''}
+        </td>
+        <td class="pg-bots-cell" style="white-space:normal;min-width:160px">${botBadges || '—'}</td>
+        <td>${!botFilter ? trendBadge(p.hits, p.previous_hits) : '—'}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  async function loadPageTitles(pages) {
+    for (let i = 0; i < pages.length; i++) {
+      const p = pages[i];
+      const el = document.getElementById('title-' + i);
+      if (!el) continue;
+      const fullUrl = _clientDomain ? _clientDomain + p.url : p.url;
+      if (!_clientDomain) {
+        el.textContent = p.url === '/' ? 'Home' : p.url;
+        el.classList.remove('loading');
+        continue;
+      }
+      try {
+        const data = await fetch('/api/page-title?url=' + encodeURIComponent(fullUrl), { headers: authHeaders() }).then(r => r.json());
+        if (el && data.title) {
+          el.textContent = data.title;
+          el.classList.remove('loading');
+        } else if (el) {
+          el.textContent = p.url === '/' ? 'Home' : p.url;
+          el.classList.remove('loading');
+        }
+      } catch {
+        if (el) { el.textContent = p.url; el.classList.remove('loading'); }
+      }
+    }
   }
 
   // ── HITS TABLE ──
