@@ -7,6 +7,7 @@ export const clientsTable = pgTable("clients", {
   name: text("name").notNull(),
   domain: text("domain").notNull(),
   api_key: text("api_key").notNull().unique(),
+  tracking_method: text("tracking_method").notNull().default("cloudflare"),
   created_at: timestamp("created_at").notNull().defaultNow(),
 });
 

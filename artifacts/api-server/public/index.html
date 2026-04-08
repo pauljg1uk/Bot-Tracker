@@ -268,14 +268,20 @@
     <input type="text" id="new-client-name" placeholder="e.g. Damira Dental" />
     <div class="field-label">Domain</div>
     <input type="text" id="new-client-domain" placeholder="e.g. damira.co.uk" />
+    <div class="field-label">Tracking Method</div>
+    <select id="new-client-method" style="width:100%;margin-bottom:16px">
+      <option value="cloudflare">Cloudflare Worker</option>
+      <option value="php">PHP / .htaccess</option>
+    </select>
     <div class="modal-actions">
       <button class="btn-primary" onclick="addClient()">Create Client</button>
       <button class="btn-ghost" onclick="closeModal('add-client-modal')">Cancel</button>
     </div>
     <div class="api-key-box" id="new-api-key">
-      <div class="label">API Key — add to Cloudflare Worker</div>
+      <div class="label">API Key</div>
       <div class="api-key" id="api-key-display"></div>
       <button class="copy-btn" onclick="copyApiKey()">Copy Key</button>
+      <div id="setup-instructions" style="margin-top:16px;font-size:13px;color:var(--muted2);line-height:1.7;border-top:1px solid var(--border);padding-top:14px;display:none"></div>
     </div>
   </div>
 </div>
@@ -418,6 +424,9 @@
     document.getElementById('new-api-key').style.display = 'none';
     document.getElementById('new-client-name').value = '';
     document.getElementById('new-client-domain').value = '';
+    document.getElementById('new-client-method').value = 'cloudflare';
+    document.getElementById('setup-instructions').style.display = 'none';
+    document.getElementById('setup-instructions').innerHTML = '';
     document.getElementById('add-client-modal').classList.add('open');
   }
 
@@ -465,14 +474,36 @@
   function addClient() {
     const name = document.getElementById('new-client-name').value.trim();
     const domain = document.getElementById('new-client-domain').value.trim();
+    const tracking_method = document.getElementById('new-client-method').value;
     if (!name || !domain) return;
     fetch('/api/clients', {
       method: 'POST',
       headers: authHeaders(),
-      body: JSON.stringify({ name, domain })
+      body: JSON.stringify({ name, domain, tracking_method })
     }).then(r => r.json()).then(client => {
       document.getElementById('api-key-display').textContent = client.api_key;
       document.getElementById('new-api-key').style.display = 'block';
+
+      const instructions = document.getElementById('setup-instructions');
+      instructions.style.display = 'block';
+      if (tracking_method === 'cloudflare') {
+        instructions.innerHTML = `
+          <strong style="color:var(--text);display:block;margin-bottom:6px">Cloudflare Worker setup</strong>
+          1. Go to <strong>Cloudflare → Workers → Create Worker</strong><br>
+          2. Paste the Cloudflare Worker script<br>
+          3. Set <code style="background:var(--bg);padding:1px 5px;border-radius:4px;color:var(--green-text)">CLIENT_API_KEY</code> to the key above<br>
+          4. Add a route for <code style="background:var(--bg);padding:1px 5px;border-radius:4px;color:var(--green-text)">${escHtml(domain)}/*</code>
+        `;
+      } else {
+        instructions.innerHTML = `
+          <strong style="color:var(--text);display:block;margin-bottom:6px">PHP / .htaccess setup</strong>
+          1. Upload <code style="background:var(--bg);padding:1px 5px;border-radius:4px;color:var(--green-text)">bot-tracker.php</code> to your site root<br>
+          2. Set <code style="background:var(--bg);padding:1px 5px;border-radius:4px;color:var(--green-text)">CLIENT_API_KEY</code> to the key above<br>
+          3. Add to the top of <code style="background:var(--bg);padding:1px 5px;border-radius:4px;color:var(--green-text)">.htaccess</code>:<br>
+          <code style="display:block;margin-top:6px;background:var(--bg);padding:6px 10px;border-radius:6px;color:var(--green-text);font-size:11px;word-break:break-all">php_value auto_prepend_file "/home/USERNAME/public_html/bot-tracker.php"</code>
+        `;
+      }
+
       loadClients();
     });
   }

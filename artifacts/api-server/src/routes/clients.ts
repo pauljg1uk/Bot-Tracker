@@ -26,14 +26,18 @@ router.get("/clients", auth, async (req, res) => {
 });
 
 router.post("/clients", auth, async (req, res) => {
-  const { name, domain } = req.body as { name: string; domain: string };
+  const { name, domain, tracking_method } = req.body as {
+    name: string;
+    domain: string;
+    tracking_method?: string;
+  };
   const api_key =
     Math.random().toString(36).substring(2, 15) +
     Math.random().toString(36).substring(2, 15);
   try {
     const [client] = await db
       .insert(clientsTable)
-      .values({ name, domain, api_key })
+      .values({ name, domain, api_key, tracking_method: tracking_method || "cloudflare" })
       .returning();
     res.json(client);
   } catch (err) {
