@@ -1,0 +1,184 @@
+Right, so three things to fix:
+
+Server generates the bot-tracker.php file with the API key already embedded — no manual editing
+A download button that pulls that pre-configured file directly
+A copy button for the exact .htaccess line ready to paste
+
+
+In server.js add this new route (paste after your existing /api/clients POST route):
+javascript// Generate pre-configured bot-tracker.php for download
+app.get('/api/clients/:clientId/php-script', auth, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM clients WHERE id = $1', [req.params.clientId]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Client not found' });
+    
+    const client = result.rows[0];
+    const replitUrl = process.env.REPLIT_URL || 'https://YOUR-REPLIT-URL.repl.co';
+
+    const phpScript = `<?php
+// AI Bot Tracker — Paul Gordon SEO
+// Client: ${client.name} (${client.domain})
+// Auto-generated — do not edit API key
+
+define('TRACKER_API', '${replitUrl}/api/hit');
+define('CLIENT_API_KEY', '${client.api_key}');
+
+$AI_BOTS = [
+  'GPTBot'             => 'GPTBot',
+  'ChatGPT-User'       => 'ChatGPT-User',
+  'ClaudeBot'          => 'ClaudeBot',
+  'Anthropic'          => 'anthropic-ai',
+  'Google-Extended'    => 'Google-Extended',
+  'PerplexityBot'      => 'PerplexityBot',
+  'Bytespider'         => 'Bytespider',
+  'CCBot'              => 'CCBot',
+  'Meta-ExternalAgent' => 'Meta-ExternalAgent',
+  'Cohere'             => 'cohere-ai',
+  'YouBot'             => 'YouBot',
+  'Diffbot'            => 'Diffbot',
+  'Applebot-Extended'  => 'Applebot-Extended',
+];
+
+$userAgent = $_SERVER['HTTP_USER_AGENT'] ?? '';
+$matchedBot = null;
+
+foreach ($AI_BOTS as $name => $pattern) {
+  if (stripos($userAgent, $pattern) !== false) {
+    $matchedBot = $name;
+    break;
+  }
+}
+
+if ($matchedBot) {
+  $url      = $_SERVER['REQUEST_URI'] ?? '/';
+  $referrer = $_SERVER['HTTP_REFERER'] ?? null;
+  $country  = $_SERVER['HTTP_CF_IPCOUNTRY'] ?? null;
+
+  $payload = json_encode([
+    'api_key'     => CLIENT_API_KEY,
+    'url'         => $url,
+    'bot_name'    => $matchedBot,
+    'user_agent'  => $userAgent,
+    'status_code' => http_response_code(),
+    'country'     => $country,
+    'referrer'    => $referrer
+  ]);
+
+  $context = stream_context_create([
+    'http' => [
+      'method'  => 'POST',
+      'header'  => "Content-Type: application/json\\r\\nContent-Length: " . strlen($payload),
+      'content' => $payload,
+      'timeout' => 2
+    ]
+  ]);
+
+  @file_get_contents(TRACKER_API, false, $context);
+}
+`;
+
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename="bot-tracker.php"`);
+    res.send(phpScript);
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+Add this to your .env:
+REPLIT_URL=https://YOUR-REPLIT-URL.repl.co
+Replace with your actual Replit URL — you'll see it in the browser when your Replit is running.
+
+Replace the addClient function in index.html:
+javascriptfunction addClient() {
+  const name = document.getElementById('new-client-name').value;
+  const domain = document.getElementById('new-client-domain').value;
+  const tracking_method = document.getElementById('new-client-method').value;
+
+  if (!name || !domain) return;
+
+  fetch('/api/clients', {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ name, domain, tracking_method })
+  }).then(r => r.json()).then(client => {
+    document.getElementById('api-key-display').textContent = client.api_key;
+    document.getElementById('new-api-key').style.display = 'block';
+
+    const instructions = document.getElementById('setup-instructions');
+
+    if (tracking_method === 'cloudflare') {
+      instructions.innerHTML = `
+        <div style="margin-bottom:12px">
+          <strong style="color:#e2e8f0">Cloudflare Worker setup:</strong>
+          <ol style="margin-top:8px;padding-left:18px;line-height:2">
+            <li>Go to Cloudflare → Workers → Create Worker</li>
+            <li>Paste the worker script</li>
+            <li>Set <code>CLIENT_API_KEY</code> to the key above</li>
+            <li>Add a route for <code>${domain}/*</code></li>
+          </ol>
+        </div>
+      `;
+    } else {
+      const htaccessLine = `php_value auto_prepend_file "/home/USERNAME/public_html/bot-tracker.php"`;
+      instructions.innerHTML = `
+        <div style="margin-bottom:16px">
+          <strong style="color:#e2e8f0">Step 1 — Download and upload the PHP file</strong>
+          <p style="margin:6px 0 10px;color:#64748b">This file is pre-configured with your API key. Upload it to the root of the site (same folder as wp-config.php or index.php).</p>
+          <button onclick="downloadPHP('${client.id}')" style="width:auto;padding:8px 16px;font-size:13px;background:#6366f1">
+            ⬇ Download bot-tracker.php
+          </button>
+        </div>
+        <div>
+          <strong style="color:#e2e8f0">Step 2 — Add this to the top of .htaccess</strong>
+          <p style="margin:6px 0 10px;color:#64748b">Update USERNAME to match the actual server path (visible in cPanel File Manager).</p>
+          <div style="background:#0f1117;border:1px solid #2d3148;border-radius:6px;padding:10px;font-family:monospace;font-size:12px;color:#6366f1;word-break:break-all;margin-bottom:8px" id="htaccess-line">${htaccessLine}</div>
+          <button onclick="copyHtaccess()" style="width:auto;padding:8px 16px;font-size:13px;background:#2d3148">
+            Copy .htaccess line
+          </button>
+          <span id="copy-confirm" style="display:none;margin-left:10px;color:#22c55e;font-size:13px">Copied!</span>
+        </div>
+      `;
+    }
+  });
+}
+
+function downloadPHP(clientId) {
+  window.location.href = `/api/clients/${clientId}/php-script?auth=${btoa('admin:' + password)}`;
+}
+
+function copyHtaccess() {
+  const text = document.getElementById('htaccess-line').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const confirm = document.getElementById('copy-confirm');
+    confirm.style.display = 'inline';
+    setTimeout(() => confirm.style.display = 'none', 2000);
+  });
+}
+
+One small fix needed in server.js — the download route uses a query param for auth instead of a header, so update the auth middleware to accept both:
+javascriptconst auth = (req, res, next) => {
+  let encoded = null;
+
+  const authHeader = req.headers.authorization;
+  if (authHeader) {
+    encoded = authHeader.split(' ')[1];
+  } else if (req.query.auth) {
+    encoded = req.query.auth;
+  }
+
+  if (!encoded) return res.status(401).json({ error: 'Unauthorised' });
+
+  const [, pwd] = Buffer.from(encoded, 'base64').toString().split(':');
+  if (pwd === process.env.DASHBOARD_PASSWORD) {
+    next();
+  } else {
+    res.status(401).json({ error: 'Invalid password' });
+  }
+};
+
+After those changes: add a client with PHP selected, hit Add Client, and you should see a download button for the pre-configured PHP file and a copy button for the .htaccess line.
