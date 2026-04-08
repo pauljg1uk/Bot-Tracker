@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { botHitsTable, clientsTable } from "@workspace/db/schema";
-import { eq, desc, gte, sql, count } from "drizzle-orm";
+import { eq, desc, sql, count } from "drizzle-orm";
 import { auth } from "./auth";
 
 const router = Router();
@@ -48,41 +48,106 @@ router.post("/hit", async (req, res) => {
 
 router.get("/stats/:clientId", auth, async (req, res) => {
   const clientId = parseInt(req.params.clientId);
-  const days = parseInt((req.query.days as string) || "30");
-  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+  const days = parseInt((req.query.days as string) || "7");
+  const now = new Date();
+  const since = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+  const prevSince = new Date(now.getTime() - 2 * days * 24 * 60 * 60 * 1000);
 
   try {
     const [totalResult] = await db
       .select({ total: count() })
       .from(botHitsTable)
+      .where(sql`${botHitsTable.client_id} = ${clientId} AND ${botHitsTable.timestamp} > ${since}`);
+
+    const [prevTotalResult] = await db
+      .select({ total: count() })
+      .from(botHitsTable)
       .where(
-        sql`${botHitsTable.client_id} = ${clientId} AND ${botHitsTable.timestamp} > ${since}`
+        sql`${botHitsTable.client_id} = ${clientId} AND ${botHitsTable.timestamp} > ${prevSince} AND ${botHitsTable.timestamp} <= ${since}`
       );
 
-    const byBot = await db
+    const byBotRaw = await db
       .select({
         bot_name: botHitsTable.bot_name,
         hits: count(),
+        last_active: sql<string>`MAX(${botHitsTable.timestamp})`,
       })
       .from(botHitsTable)
-      .where(
-        sql`${botHitsTable.client_id} = ${clientId} AND ${botHitsTable.timestamp} > ${since}`
-      )
+      .where(sql`${botHitsTable.client_id} = ${clientId} AND ${botHitsTable.timestamp} > ${since}`)
       .groupBy(botHitsTable.bot_name)
       .orderBy(desc(count()));
 
-    const topPages = await db
-      .select({
-        url: botHitsTable.url,
-        hits: count(),
-      })
+    const byBotPrev = await db
+      .select({ bot_name: botHitsTable.bot_name, hits: count() })
       .from(botHitsTable)
       .where(
-        sql`${botHitsTable.client_id} = ${clientId} AND ${botHitsTable.timestamp} > ${since}`
+        sql`${botHitsTable.client_id} = ${clientId} AND ${botHitsTable.timestamp} > ${prevSince} AND ${botHitsTable.timestamp} <= ${since}`
       )
+      .groupBy(botHitsTable.bot_name);
+
+    const prevBotMap: Record<string, number> = {};
+    byBotPrev.forEach((b) => {
+      prevBotMap[b.bot_name] = Number(b.hits);
+    });
+
+    const byBot = byBotRaw.map((b) => ({
+      bot_name: b.bot_name,
+      hits: Number(b.hits),
+      last_active: b.last_active,
+      previous_hits: prevBotMap[b.bot_name] || 0,
+    }));
+
+    const topPagesRaw = await db
+      .select({ url: botHitsTable.url, hits: count() })
+      .from(botHitsTable)
+      .where(sql`${botHitsTable.client_id} = ${clientId} AND ${botHitsTable.timestamp} > ${since}`)
       .groupBy(botHitsTable.url)
       .orderBy(desc(count()))
       .limit(10);
+
+    const topUrls = topPagesRaw.map((p) => p.url);
+
+    const pageBotsRaw =
+      topUrls.length > 0
+        ? await db
+            .select({
+              url: botHitsTable.url,
+              bot_name: botHitsTable.bot_name,
+              hits: count(),
+            })
+            .from(botHitsTable)
+            .where(
+              sql`${botHitsTable.client_id} = ${clientId} AND ${botHitsTable.timestamp} > ${since} AND ${botHitsTable.url} IN (${sql.join(topUrls.map((u) => sql`${u}`), sql`, `)})`
+            )
+            .groupBy(botHitsTable.url, botHitsTable.bot_name)
+            .orderBy(desc(count()))
+        : [];
+
+    const pageBotsMap: Record<string, Array<{ bot_name: string; hits: number }>> = {};
+    pageBotsRaw.forEach((r) => {
+      if (!pageBotsMap[r.url]) pageBotsMap[r.url] = [];
+      pageBotsMap[r.url].push({ bot_name: r.bot_name, hits: Number(r.hits) });
+    });
+
+    const topPagesPrev = await db
+      .select({ url: botHitsTable.url, hits: count() })
+      .from(botHitsTable)
+      .where(
+        sql`${botHitsTable.client_id} = ${clientId} AND ${botHitsTable.timestamp} > ${prevSince} AND ${botHitsTable.timestamp} <= ${since}`
+      )
+      .groupBy(botHitsTable.url);
+
+    const prevPageMap: Record<string, number> = {};
+    topPagesPrev.forEach((p) => {
+      prevPageMap[p.url] = Number(p.hits);
+    });
+
+    const topPages = topPagesRaw.map((p) => ({
+      url: p.url,
+      hits: Number(p.hits),
+      previous_hits: prevPageMap[p.url] || 0,
+      bots: pageBotsMap[p.url] || [],
+    }));
 
     const overTime = await db
       .select({
@@ -90,14 +155,13 @@ router.get("/stats/:clientId", auth, async (req, res) => {
         hits: count(),
       })
       .from(botHitsTable)
-      .where(
-        sql`${botHitsTable.client_id} = ${clientId} AND ${botHitsTable.timestamp} > ${since}`
-      )
+      .where(sql`${botHitsTable.client_id} = ${clientId} AND ${botHitsTable.timestamp} > ${since}`)
       .groupBy(sql`DATE(${botHitsTable.timestamp})`)
       .orderBy(sql`DATE(${botHitsTable.timestamp})`);
 
     res.json({
-      total: totalResult?.total ?? 0,
+      total: Number(totalResult?.total ?? 0),
+      previousTotal: Number(prevTotalResult?.total ?? 0),
       byBot,
       topPages,
       overTime,
@@ -110,16 +174,14 @@ router.get("/stats/:clientId", auth, async (req, res) => {
 
 router.get("/hits/:clientId", auth, async (req, res) => {
   const clientId = parseInt(req.params.clientId);
-  const days = parseInt((req.query.days as string) || "30");
+  const days = parseInt((req.query.days as string) || "7");
   const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
   try {
     const hits = await db
       .select()
       .from(botHitsTable)
-      .where(
-        sql`${botHitsTable.client_id} = ${clientId} AND ${botHitsTable.timestamp} > ${since}`
-      )
+      .where(sql`${botHitsTable.client_id} = ${clientId} AND ${botHitsTable.timestamp} > ${since}`)
       .orderBy(desc(botHitsTable.timestamp))
       .limit(200);
 
