@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Bot Tracker</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: #0f1117; color: #e2e8f0; min-height: 100vh; }
+    #login-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+    .login-box { background: #1a1d27; padding: 40px; border-radius: 12px; width: 340px; border: 1px solid #2d3148; }
+    .login-box h1 { font-size: 20px; margin-bottom: 8px; }
+    .login-box p { color: #64748b; font-size: 14px; margin-bottom: 24px; }
+    input { width: 100%; padding: 10px 14px; background: #0f1117; border: 1px solid #2d3148; border-radius: 8px; color: #e2e8f0; font-size: 14px; margin-bottom: 12px; outline: none; }
+    input:focus { border-color: #6366f1; }
+    button { width: 100%; padding: 10px; background: #6366f1; border: none; border-radius: 8px; color: white; font-size: 14px; cursor: pointer; transition: background 0.15s; }
+    button:hover { background: #4f46e5; }
+    #app { display: none; }
+    .header { background: #1a1d27; border-bottom: 1px solid #2d3148; padding: 16px 24px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .header h1 { font-size: 16px; font-weight: 600; flex: 1; display: flex; align-items: center; gap: 8px; }
+    .header h1 span { display: inline-block; width: 8px; height: 8px; background: #6366f1; border-radius: 50%; }
+    select { background: #0f1117; border: 1px solid #2d3148; color: #e2e8f0; padding: 8px 12px; border-radius: 8px; font-size: 14px; outline: none; cursor: pointer; }
+    select:focus { border-color: #6366f1; }
+    .btn-small { width: auto; padding: 8px 14px; font-size: 13px; }
+    .btn-danger { background: #ef4444; }
+    .btn-danger:hover { background: #dc2626; }
+    .main { padding: 24px; max-width: 1200px; margin: 0 auto; }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .stat-card { background: #1a1d27; border: 1px solid #2d3148; border-radius: 10px; padding: 20px; }
+    .stat-card .label { font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+    .stat-card .value { font-size: 32px; font-weight: 700; color: #6366f1; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+    @media (max-width: 700px) { .two-col { grid-template-columns: 1fr; } }
+    .panel { background: #1a1d27; border: 1px solid #2d3148; border-radius: 10px; padding: 20px; margin-bottom: 16px; }
+    .panel h2 { font-size: 12px; font-weight: 600; margin-bottom: 16px; color: #64748b; text-transform: uppercase; letter-spacing: 0.07em; }
+    .bot-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #1e2035; font-size: 14px; }
+    .bot-row:last-child { border: none; }
+    .bot-badge { background: #1e2035; border: 1px solid #2d3148; padding: 2px 10px; border-radius: 20px; font-size: 12px; color: #818cf8; }
+    .hits-count { font-weight: 600; color: #e2e8f0; font-size: 14px; }
+    .url-text { font-size: 12px; color: #94a3b8; font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 240px; }
+    .scroll-table { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { text-align: left; padding: 8px 12px; color: #64748b; font-weight: 500; border-bottom: 1px solid #2d3148; white-space: nowrap; }
+    td { padding: 8px 12px; border-bottom: 1px solid #1e2035; color: #e2e8f0; }
+    td.mono { font-family: monospace; color: #94a3b8; font-size: 12px; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .status-ok { color: #34d399; }
+    .status-err { color: #f87171; }
+    .empty { color: #64748b; font-size: 14px; padding: 20px 0; text-align: center; }
+    .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); align-items: center; justify-content: center; z-index: 100; }
+    .modal.open { display: flex; }
+    .modal-box { background: #1a1d27; border: 1px solid #2d3148; border-radius: 12px; padding: 32px; width: 420px; max-width: 95vw; }
+    .modal-box h2 { margin-bottom: 20px; font-size: 16px; }
+    .modal-box input { margin-bottom: 12px; }
+    .modal-actions { display: flex; gap: 8px; margin-top: 8px; }
+    .btn-cancel { background: #2d3148; }
+    .btn-cancel:hover { background: #3d4168; }
+    .api-key-box { margin-top: 16px; background: #0f1117; border: 1px solid #2d3148; border-radius: 8px; padding: 14px; display: none; }
+    .api-key-box p { font-size: 12px; color: #64748b; margin-bottom: 8px; }
+    .api-key { font-family: monospace; font-size: 12px; color: #818cf8; word-break: break-all; }
+    .copy-btn { margin-top: 8px; background: #2d3148; padding: 6px 12px; font-size: 12px; width: auto; }
+    .copy-btn:hover { background: #3d4168; }
+    .client-list { margin-bottom: 20px; }
+    .client-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: #1a1d27; border: 1px solid #2d3148; border-radius: 8px; margin-bottom: 8px; }
+    .client-item-info { flex: 1; }
+    .client-item-name { font-weight: 600; font-size: 14px; }
+    .client-item-domain { font-size: 12px; color: #64748b; margin-top: 2px; font-family: monospace; }
+    .tabs { display: flex; gap: 2px; margin-bottom: 20px; background: #1a1d27; border: 1px solid #2d3148; padding: 4px; border-radius: 10px; width: fit-content; }
+    .tab { padding: 6px 16px; border-radius: 7px; font-size: 13px; cursor: pointer; border: none; background: transparent; color: #64748b; transition: all 0.15s; }
+    .tab.active { background: #6366f1; color: white; }
+    .chart-wrap { height: 120px; display: flex; align-items: flex-end; gap: 3px; padding-top: 8px; }
+    .chart-bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; justify-content: flex-end; }
+    .chart-bar { width: 100%; background: #6366f1; border-radius: 3px 3px 0 0; min-height: 2px; transition: height 0.3s ease; }
+    .chart-label { font-size: 9px; color: #475569; white-space: nowrap; }
+    #no-client { color: #64748b; padding: 60px 0; font-size: 14px; text-align: center; }
+    .badge-country { background: #1e2035; border: 1px solid #2d3148; padding: 1px 7px; border-radius: 4px; font-size: 11px; color: #94a3b8; }
+    .loading { color: #64748b; font-size: 14px; padding: 40px 0; text-align: center; }
+  </style>
+</head>
+<body>
+
+<div id="login-screen">
+  <div class="login-box">
+    <h1>AI Bot Tracker</h1>
+    <p>Sign in to your dashboard</p>
+    <input type="password" id="password-input" placeholder="Password" autocomplete="current-password" />
+    <button onclick="login()">Sign In</button>
+    <p id="login-error" style="color:#ef4444;font-size:13px;margin-top:10px;display:none">Incorrect password</p>
+  </div>
+</div>
+
+<div id="app">
+  <div class="header">
+    <h1><span></span> AI Bot Tracker</h1>
+    <select id="client-select" onchange="loadClient()">
+      <option value="">Select client...</option>
+    </select>
+    <select id="days-select" onchange="loadClient()">
+      <option value="7">Last 7 days</option>
+      <option value="30" selected>Last 30 days</option>
+      <option value="90">Last 90 days</option>
+    </select>
+    <button class="btn-small" onclick="openAddClient()">+ Add Client</button>
+    <button class="btn-small" onclick="openManageClients()" style="background:#2d3148">Manage</button>
+  </div>
+
+  <div class="main">
+    <div id="dashboard" style="display:none">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="label">Total Bot Hits</div>
+          <div class="value" id="stat-total">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Unique Bots</div>
+          <div class="value" id="stat-bots">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Pages Crawled</div>
+          <div class="value" id="stat-pages">—</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Activity Over Time</h2>
+        <div class="chart-wrap" id="time-chart"></div>
+      </div>
+
+      <div class="two-col">
+        <div class="panel">
+          <h2>By Bot</h2>
+          <div id="bot-breakdown"></div>
+        </div>
+        <div class="panel">
+          <h2>Top Pages</h2>
+          <div id="top-pages"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Recent Hits</h2>
+        <div class="scroll-table">
+          <table>
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Bot</th>
+                <th>URL</th>
+                <th>Country</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="hits-table"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="no-client">
+      Select a client above to view their bot data.
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="add-client-modal">
+  <div class="modal-box">
+    <h2>Add Client</h2>
+    <input type="text" id="new-client-name" placeholder="Client name (e.g. Damira Dental)" />
+    <input type="text" id="new-client-domain" placeholder="Domain (e.g. damira.co.uk)" />
+    <div class="modal-actions">
+      <button onclick="addClient()">Add Client</button>
+      <button class="btn-cancel" onclick="closeModal('add-client-modal')">Cancel</button>
+    </div>
+    <div class="api-key-box" id="new-api-key">
+      <p>API Key — add this to your Cloudflare Worker:</p>
+      <div class="api-key" id="api-key-display"></div>
+      <button class="copy-btn" onclick="copyApiKey()">Copy</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="manage-clients-modal">
+  <div class="modal-box" style="width:500px">
+    <h2>Manage Clients</h2>
+    <div class="client-list" id="manage-client-list"></div>
+    <button class="btn-cancel" onclick="closeModal('manage-clients-modal')" style="width:auto;padding:8px 16px">Close</button>
+  </div>
+</div>
+
+<script>
+  let password = '';
+
+  function login() {
+    password = document.getElementById('password-input').value;
+    fetch('/api/clients', {
+      headers: { 'Authorization': 'Basic ' + btoa('admin:' + password) }
+    }).then(r => {
+      if (r.ok) {
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('app').style.display = 'block';
+        loadClients();
+      } else {
+        document.getElementById('login-error').style.display = 'block';
+      }
+    }).catch(() => {
+      document.getElementById('login-error').style.display = 'block';
+    });
+  }
+
+  function authHeaders() {
+    return { 'Authorization': 'Basic ' + btoa('admin:' + password), 'Content-Type': 'application/json' };
+  }
+
+  function loadClients() {
+    fetch('/api/clients', { headers: authHeaders() })
+      .then(r => r.json())
+      .then(clients => {
+        const select = document.getElementById('client-select');
+        const current = select.value;
+        select.innerHTML = '<option value="">Select client...</option>';
+        clients.forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = c.id;
+          opt.textContent = c.name + ' — ' + c.domain;
+          select.appendChild(opt);
+        });
+        if (current) {
+          select.value = current;
+        }
+      });
+  }
+
+  function loadClient() {
+    const clientId = document.getElementById('client-select').value;
+    const days = document.getElementById('days-select').value;
+    if (!clientId) {
+      document.getElementById('dashboard').style.display = 'none';
+      document.getElementById('no-client').style.display = 'block';
+      return;
+    }
+    document.getElementById('dashboard').style.display = 'block';
+    document.getElementById('no-client').style.display = 'none';
+
+    Promise.all([
+      fetch('/api/stats/' + clientId + '?days=' + days, { headers: authHeaders() }).then(r => r.json()),
+      fetch('/api/hits/' + clientId + '?days=' + days, { headers: authHeaders() }).then(r => r.json())
+    ]).then(([stats, hits]) => {
+      document.getElementById('stat-total').textContent = stats.total;
+      document.getElementById('stat-bots').textContent = stats.byBot.length;
+      document.getElementById('stat-pages').textContent = stats.topPages.length;
+
+      renderChart(stats.overTime, parseInt(days));
+
+      document.getElementById('bot-breakdown').innerHTML = stats.byBot.length
+        ? stats.byBot.map(b => `
+          <div class="bot-row">
+            <span class="bot-badge">${escHtml(b.bot_name || 'Unknown')}</span>
+            <span class="hits-count">${b.hits}</span>
+          </div>`).join('')
+        : '<div class="empty">No bot data yet</div>';
+
+      document.getElementById('top-pages').innerHTML = stats.topPages.length
+        ? stats.topPages.map(p => `
+          <div class="bot-row">
+            <span class="url-text" title="${escHtml(p.url || '')}">${escHtml(p.url || '/')}</span>
+            <span class="hits-count">${p.hits}</span>
+          </div>`).join('')
+        : '<div class="empty">No page data yet</div>';
+
+      document.getElementById('hits-table').innerHTML = hits.length
+        ? hits.map(h => {
+            const statusClass = h.status_code && h.status_code < 400 ? 'status-ok' : 'status-err';
+            return `<tr>
+              <td style="white-space:nowrap;color:#94a3b8">${new Date(h.timestamp).toLocaleString()}</td>
+              <td><span class="bot-badge">${escHtml(h.bot_name || 'Unknown')}</span></td>
+              <td class="mono" title="${escHtml(h.url || '')}">${escHtml(h.url || '/')}</td>
+              <td><span class="badge-country">${escHtml(h.country || '—')}</span></td>
+              <td class="${statusClass}">${h.status_code || '—'}</td>
+            </tr>`;
+          }).join('')
+        : '<tr><td colspan="5" class="empty">No hits yet</td></tr>';
+    }).catch(err => {
+      console.error(err);
+    });
+  }
+
+  function renderChart(overTime, days) {
+    const chart = document.getElementById('time-chart');
+    if (!overTime || overTime.length === 0) {
+      chart.innerHTML = '<div class="empty" style="width:100%">No activity data yet</div>';
+      return;
+    }
+    const maxHits = Math.max(...overTime.map(d => parseInt(d.hits)));
+    const allDates = [];
+    const end = new Date();
+    for (let i = Math.min(days, 30) - 1; i >= 0; i--) {
+      const d = new Date(end);
+      d.setDate(d.getDate() - i);
+      allDates.push(d.toISOString().split('T')[0]);
+    }
+    const hitMap = {};
+    overTime.forEach(d => { hitMap[d.date] = parseInt(d.hits); });
+    const displayDates = allDates.slice(-14);
+    chart.innerHTML = displayDates.map(date => {
+      const hits = hitMap[date] || 0;
+      const pct = maxHits > 0 ? Math.max(4, Math.round((hits / maxHits) * 100)) : 4;
+      const label = date.slice(5);
+      return `<div class="chart-bar-wrap" title="${date}: ${hits} hits">
+        <div class="chart-bar" style="height:${pct}%"></div>
+        <div class="chart-label">${label}</div>
+      </div>`;
+    }).join('');
+  }
+
+  function openAddClient() {
+    document.getElementById('new-api-key').style.display = 'none';
+    document.getElementById('new-client-name').value = '';
+    document.getElementById('new-client-domain').value = '';
+    document.getElementById('add-client-modal').classList.add('open');
+  }
+
+  function openManageClients() {
+    fetch('/api/clients', { headers: authHeaders() })
+      .then(r => r.json())
+      .then(clients => {
+        const list = document.getElementById('manage-client-list');
+        if (!clients.length) {
+          list.innerHTML = '<div class="empty">No clients yet</div>';
+        } else {
+          list.innerHTML = clients.map(c => `
+            <div class="client-item">
+              <div class="client-item-info">
+                <div class="client-item-name">${escHtml(c.name)}</div>
+                <div class="client-item-domain">${escHtml(c.domain)}</div>
+                <div class="api-key" style="margin-top:6px;font-size:11px">${escHtml(c.api_key)}</div>
+              </div>
+              <button class="btn-small btn-danger" onclick="deleteClient(${c.id})" style="margin-left:12px">Delete</button>
+            </div>`).join('');
+        }
+      });
+    document.getElementById('manage-clients-modal').classList.add('open');
+  }
+
+  function deleteClient(id) {
+    if (!confirm('Delete this client and all their data?')) return;
+    fetch('/api/clients/' + id, { method: 'DELETE', headers: authHeaders() })
+      .then(() => {
+        loadClients();
+        openManageClients();
+        const select = document.getElementById('client-select');
+        if (select.value == id) {
+          select.value = '';
+          document.getElementById('dashboard').style.display = 'none';
+          document.getElementById('no-client').style.display = 'block';
+        }
+      });
+  }
+
+  function closeModal(id) {
+    document.getElementById(id).classList.remove('open');
+  }
+
+  function addClient() {
+    const name = document.getElementById('new-client-name').value.trim();
+    const domain = document.getElementById('new-client-domain').value.trim();
+    if (!name || !domain) return;
+    fetch('/api/clients', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ name, domain })
+    }).then(r => r.json()).then(client => {
+      document.getElementById('api-key-display').textContent = client.api_key;
+      document.getElementById('new-api-key').style.display = 'block';
+      loadClients();
+    });
+  }
+
+  function copyApiKey() {
+    const key = document.getElementById('api-key-display').textContent;
+    navigator.clipboard.writeText(key).then(() => {
+      const btn = document.querySelector('.copy-btn');
+      btn.textContent = 'Copied!';
+      setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+    });
+  }
+
+  function escHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  document.getElementById('password-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') login();
+  });
+
+  document.querySelectorAll('.modal').forEach(modal => {
+    modal.addEventListener('click', e => {
+      if (e.target === modal) modal.classList.remove('open');
+    });
+  });
+</script>
+</body>
+</html>

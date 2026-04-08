@@ -1,0 +1,481 @@
+Replit file structure to create:
+ai-bot-tracker/
+├── server.js
+├── package.json
+├── .env
+└── public/
+    └── index.html
+
+package.json
+json{
+  "name": "ai-bot-tracker",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.0",
+    "express": "^4.18.2",
+    "pg": "^8.11.0"
+  }
+}
+
+.env
+DATABASE_URL=postgresql://postgres:DMGFH2batiQNIIq8@db.zqkspdofirqhxkhkrzgl.supabase.co:5432/postgres
+DASHBOARD_PASSWORD=admin123
+PORT=3000
+
+server.js
+javascriptrequire('dotenv').config();
+const express = require('express');
+const { Pool } = require('pg');
+const cors = require('cors');
+const path = require('path');
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+app.use(express.static('public'));
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
+});
+
+// --- Auth middleware for dashboard API routes ---
+const auth = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) {
+    return res.status(401).json({ error: 'Unauthorised' });
+  }
+  const base64 = authHeader.split(' ')[1];
+  const [, password] = Buffer.from(base64, 'base64').toString().split(':');
+  if (password === process.env.DASHBOARD_PASSWORD) {
+    next();
+  } else {
+    res.status(401).json({ error: 'Invalid password' });
+  }
+};
+
+// --- Receive bot hit from Cloudflare Worker ---
+app.post('/api/hit', async (req, res) => {
+  const { api_key, url, bot_name, user_agent, status_code, country, referrer } = req.body;
+  try {
+    const clientResult = await pool.query(
+      'SELECT id FROM clients WHERE api_key = $1', [api_key]
+    );
+    if (clientResult.rows.length === 0) {
+      return res.status(401).json({ error: 'Invalid API key' });
+    }
+    const client_id = clientResult.rows[0].id;
+    await pool.query(
+      `INSERT INTO bot_hits (client_id, url, bot_name, user_agent, status_code, country, referrer)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [client_id, url, bot_name, user_agent, status_code, country, referrer]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// --- Get all clients ---
+app.get('/api/clients', auth, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT id, name, domain, api_key, created_at FROM clients ORDER BY created_at DESC'
+    );
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// --- Create a client ---
+app.post('/api/clients', auth, async (req, res) => {
+  const { name, domain } = req.body;
+  const api_key = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+  try {
+    const result = await pool.query(
+      'INSERT INTO clients (name, domain, api_key) VALUES ($1, $2, $3) RETURNING *',
+      [name, domain, api_key]
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// --- Get stats for a client ---
+app.get('/api/stats/:clientId', auth, async (req, res) => {
+  const { clientId } = req.params;
+  const days = parseInt(req.query.days) || 30;
+  try {
+    const [totalHits, byBot, topPages, overTime] = await Promise.all([
+      pool.query(
+        `SELECT COUNT(*) as total FROM bot_hits 
+         WHERE client_id = $1 AND timestamp > NOW() - INTERVAL '${days} days'`,
+        [clientId]
+      ),
+      pool.query(
+        `SELECT bot_name, COUNT(*) as hits FROM bot_hits 
+         WHERE client_id = $1 AND timestamp > NOW() - INTERVAL '${days} days'
+         GROUP BY bot_name ORDER BY hits DESC`,
+        [clientId]
+      ),
+      pool.query(
+        `SELECT url, COUNT(*) as hits FROM bot_hits 
+         WHERE client_id = $1 AND timestamp > NOW() - INTERVAL '${days} days'
+         GROUP BY url ORDER BY hits DESC LIMIT 10`,
+        [clientId]
+      ),
+      pool.query(
+        `SELECT DATE(timestamp) as date, COUNT(*) as hits FROM bot_hits 
+         WHERE client_id = $1 AND timestamp > NOW() - INTERVAL '${days} days'
+         GROUP BY DATE(timestamp) ORDER BY date ASC`,
+        [clientId]
+      )
+    ]);
+    res.json({
+      total: totalHits.rows[0].total,
+      byBot: byBot.rows,
+      topPages: topPages.rows,
+      overTime: overTime.rows
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// --- Recent hits for a client ---
+app.get('/api/hits/:clientId', auth, async (req, res) => {
+  const { clientId } = req.params;
+  const days = parseInt(req.query.days) || 30;
+  try {
+    const result = await pool.query(
+      `SELECT * FROM bot_hits 
+       WHERE client_id = $1 AND timestamp > NOW() - INTERVAL '${days} days'
+       ORDER BY timestamp DESC LIMIT 200`,
+      [clientId]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`AI Bot Tracker running on port ${PORT}`));
+
+public/index.html
+html<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Bot Tracker</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; background: #0f1117; color: #e2e8f0; min-height: 100vh; }
+    #login-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+    .login-box { background: #1a1d27; padding: 40px; border-radius: 12px; width: 340px; border: 1px solid #2d3148; }
+    .login-box h1 { font-size: 20px; margin-bottom: 8px; }
+    .login-box p { color: #64748b; font-size: 14px; margin-bottom: 24px; }
+    input { width: 100%; padding: 10px 14px; background: #0f1117; border: 1px solid #2d3148; border-radius: 8px; color: #e2e8f0; font-size: 14px; margin-bottom: 12px; }
+    button { width: 100%; padding: 10px; background: #6366f1; border: none; border-radius: 8px; color: white; font-size: 14px; cursor: pointer; }
+    button:hover { background: #4f46e5; }
+    #app { display: none; }
+    .header { background: #1a1d27; border-bottom: 1px solid #2d3148; padding: 16px 24px; display: flex; align-items: center; gap: 16px; }
+    .header h1 { font-size: 16px; font-weight: 600; flex: 1; }
+    select { background: #0f1117; border: 1px solid #2d3148; color: #e2e8f0; padding: 8px 12px; border-radius: 8px; font-size: 14px; }
+    .btn-small { width: auto; padding: 8px 14px; font-size: 13px; }
+    .main { padding: 24px; max-width: 1100px; margin: 0 auto; }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .stat-card { background: #1a1d27; border: 1px solid #2d3148; border-radius: 10px; padding: 20px; }
+    .stat-card .label { font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+    .stat-card .value { font-size: 32px; font-weight: 700; color: #6366f1; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+    .panel { background: #1a1d27; border: 1px solid #2d3148; border-radius: 10px; padding: 20px; }
+    .panel h2 { font-size: 14px; font-weight: 600; margin-bottom: 16px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; }
+    .bot-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #2d3148; font-size: 14px; }
+    .bot-row:last-child { border: none; }
+    .bot-badge { background: #1e2035; border: 1px solid #2d3148; padding: 2px 8px; border-radius: 20px; font-size: 12px; color: #6366f1; }
+    .hits-count { font-weight: 600; color: #e2e8f0; }
+    .url-text { font-size: 13px; color: #94a3b8; font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 250px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { text-align: left; padding: 8px 12px; color: #64748b; font-weight: 500; border-bottom: 1px solid #2d3148; }
+    td { padding: 8px 12px; border-bottom: 1px solid #1e2035; }
+    td.mono { font-family: monospace; color: #94a3b8; font-size: 12px; }
+    .empty { color: #64748b; font-size: 14px; padding: 20px 0; }
+    .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); align-items: center; justify-content: center; z-index: 100; }
+    .modal.open { display: flex; }
+    .modal-box { background: #1a1d27; border: 1px solid #2d3148; border-radius: 12px; padding: 32px; width: 400px; }
+    .modal-box h2 { margin-bottom: 20px; font-size: 16px; }
+    .modal-box input { margin-bottom: 12px; }
+    .modal-actions { display: flex; gap: 8px; margin-top: 8px; }
+    .btn-cancel { background: #2d3148; }
+    .btn-cancel:hover { background: #3d4168; }
+    .api-key { font-family: monospace; font-size: 11px; color: #6366f1; background: #0f1117; padding: 4px 8px; border-radius: 4px; word-break: break-all; }
+  </style>
+</head>
+<body>
+
+<div id="login-screen">
+  <div class="login-box">
+    <h1>AI Bot Tracker</h1>
+    <p>Sign in to your dashboard</p>
+    <input type="password" id="password-input" placeholder="Password" />
+    <button onclick="login()">Sign In</button>
+    <p id="login-error" style="color:#ef4444;font-size:13px;margin-top:10px;display:none">Incorrect password</p>
+  </div>
+</div>
+
+<div id="app">
+  <div class="header">
+    <h1>AI Bot Tracker</h1>
+    <select id="client-select" onchange="loadClient()">
+      <option value="">Select client...</option>
+    </select>
+    <select id="days-select" onchange="loadClient()">
+      <option value="7">Last 7 days</option>
+      <option value="30" selected>Last 30 days</option>
+      <option value="90">Last 90 days</option>
+    </select>
+    <button class="btn-small" onclick="openAddClient()">+ Add Client</button>
+  </div>
+
+  <div class="main">
+    <div id="dashboard" style="display:none">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="label">Total Bot Hits</div>
+          <div class="value" id="stat-total">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Unique Bots</div>
+          <div class="value" id="stat-bots">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Pages Crawled</div>
+          <div class="value" id="stat-pages">—</div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div class="panel">
+          <h2>By Bot</h2>
+          <div id="bot-breakdown"></div>
+        </div>
+        <div class="panel">
+          <h2>Top Pages</h2>
+          <div id="top-pages"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Recent Hits</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Bot</th>
+              <th>URL</th>
+              <th>Country</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="hits-table"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="no-client" style="color:#64748b;padding:40px 0;font-size:14px">
+      Select a client above to view their bot data.
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="add-client-modal">
+  <div class="modal-box">
+    <h2>Add Client</h2>
+    <input type="text" id="new-client-name" placeholder="Client name (e.g. Damira Dental)" />
+    <input type="text" id="new-client-domain" placeholder="Domain (e.g. damira.co.uk)" />
+    <div class="modal-actions">
+      <button onclick="addClient()">Add Client</button>
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+    </div>
+    <div id="new-api-key" style="margin-top:16px;display:none">
+      <p style="font-size:13px;color:#64748b;margin-bottom:6px">API Key (add to Cloudflare Worker):</p>
+      <div class="api-key" id="api-key-display"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let password = '';
+
+  function login() {
+    password = document.getElementById('password-input').value;
+    fetch('/api/clients', {
+      headers: { 'Authorization': 'Basic ' + btoa('admin:' + password) }
+    }).then(r => {
+      if (r.ok) {
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('app').style.display = 'block';
+        loadClients();
+      } else {
+        document.getElementById('login-error').style.display = 'block';
+      }
+    });
+  }
+
+  function authHeaders() {
+    return { 'Authorization': 'Basic ' + btoa('admin:' + password), 'Content-Type': 'application/json' };
+  }
+
+  function loadClients() {
+    fetch('/api/clients', { headers: authHeaders() })
+      .then(r => r.json())
+      .then(clients => {
+        const select = document.getElementById('client-select');
+        select.innerHTML = '<option value="">Select client...</option>';
+        clients.forEach(c => {
+          select.innerHTML += `<option value="${c.id}">${c.name} — ${c.domain}</option>`;
+        });
+      });
+  }
+
+  function loadClient() {
+    const clientId = document.getElementById('client-select').value;
+    const days = document.getElementById('days-select').value;
+    if (!clientId) {
+      document.getElementById('dashboard').style.display = 'none';
+      document.getElementById('no-client').style.display = 'block';
+      return;
+    }
+    document.getElementById('dashboard').style.display = 'block';
+    document.getElementById('no-client').style.display = 'none';
+
+    Promise.all([
+      fetch(`/api/stats/${clientId}?days=${days}`, { headers: authHeaders() }).then(r => r.json()),
+      fetch(`/api/hits/${clientId}?days=${days}`, { headers: authHeaders() }).then(r => r.json())
+    ]).then(([stats, hits]) => {
+      document.getElementById('stat-total').textContent = stats.total;
+      document.getElementById('stat-bots').textContent = stats.byBot.length;
+      document.getElementById('stat-pages').textContent = stats.topPages.length;
+
+      document.getElementById('bot-breakdown').innerHTML = stats.byBot.length
+        ? stats.byBot.map(b => `
+          <div class="bot-row">
+            <span class="bot-badge">${b.bot_name}</span>
+            <span class="hits-count">${b.hits} hits</span>
+          </div>`).join('')
+        : '<div class="empty">No data yet</div>';
+
+      document.getElementById('top-pages').innerHTML = stats.topPages.length
+        ? stats.topPages.map(p => `
+          <div class="bot-row">
+            <span class="url-text" title="${p.url}">${p.url}</span>
+            <span class="hits-count">${p.hits}</span>
+          </div>`).join('')
+        : '<div class="empty">No data yet</div>';
+
+      document.getElementById('hits-table').innerHTML = hits.length
+        ? hits.map(h => `
+          <tr>
+            <td>${new Date(h.timestamp).toLocaleString()}</td>
+            <td><span class="bot-badge">${h.bot_name}</span></td>
+            <td class="mono" title="${h.url}">${h.url}</td>
+            <td>${h.country || '—'}</td>
+            <td>${h.status_code || '—'}</td>
+          </tr>`).join('')
+        : '<tr><td colspan="5" style="color:#64748b;padding:20px 0">No hits yet</td></tr>';
+    });
+  }
+
+  function openAddClient() {
+    document.getElementById('add-client-modal').classList.add('open');
+    document.getElementById('new-api-key').style.display = 'none';
+  }
+
+  function closeModal() {
+    document.getElementById('add-client-modal').classList.remove('open');
+    document.getElementById('new-client-name').value = '';
+    document.getElementById('new-client-domain').value = '';
+    loadClients();
+  }
+
+  function addClient() {
+    const name = document.getElementById('new-client-name').value;
+    const domain = document.getElementById('new-client-domain').value;
+    fetch('/api/clients', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ name, domain })
+    }).then(r => r.json()).then(client => {
+      document.getElementById('api-key-display').textContent = client.api_key;
+      document.getElementById('new-api-key').style.display = 'block';
+    });
+  }
+
+  document.getElementById('password-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') login();
+  });
+</script>
+</body>
+</html>
+
+cloudflare-worker.js — this goes into Cloudflare, not Replit
+javascriptconst AI_BOTS = [
+  { name: 'GPTBot', pattern: 'GPTBot' },
+  { name: 'ChatGPT-User', pattern: 'ChatGPT-User' },
+  { name: 'ClaudeBot', pattern: 'ClaudeBot' },
+  { name: 'Anthropic', pattern: 'anthropic-ai' },
+  { name: 'Google-Extended', pattern: 'Google-Extended' },
+  { name: 'PerplexityBot', pattern: 'PerplexityBot' },
+  { name: 'Bytespider', pattern: 'Bytespider' },
+  { name: 'CCBot', pattern: 'CCBot' },
+  { name: 'Meta-ExternalAgent', pattern: 'Meta-ExternalAgent' },
+  { name: 'Cohere', pattern: 'cohere-ai' },
+  { name: 'YouBot', pattern: 'YouBot' },
+  { name: 'Diffbot', pattern: 'Diffbot' },
+  { name: 'Applebot-Extended', pattern: 'Applebot-Extended' },
+];
+
+const API_ENDPOINT = 'https://YOUR-REPLIT-URL.repl.co/api/hit';
+const CLIENT_API_KEY = 'YOUR-CLIENT-API-KEY';
+
+addEventListener('fetch', event => {
+  event.respondWith(handleRequest(event.request, event));
+});
+
+async function handleRequest(request, event) {
+  const response = await fetch(request);
+  const userAgent = request.headers.get('User-Agent') || '';
+  const matchedBot = AI_BOTS.find(bot => userAgent.includes(bot.pattern));
+
+  if (matchedBot) {
+    const url = new URL(request.url);
+    event.waitUntil(
+      fetch(API_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          api_key: CLIENT_API_KEY,
+          url: url.pathname,
+          bot_name: matchedBot.name,
+          user_agent: userAgent,
+          status_code: response.status,
+          country: request.cf ? request.cf.country : null,
+          referrer: request.headers.get('Referer') || null
+        })
+      })
+    );
+  }
+
+  return response;
+}
