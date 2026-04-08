@@ -231,6 +231,11 @@
     #no-client-empty { color: var(--muted); padding: 80px 0; font-size: 14px; text-align: center; }
     #no-client-empty strong { display: block; font-size: 20px; font-weight: 600; color: var(--muted2); margin-bottom: 8px; }
 
+    /* ── EXPORT BUTTON ── */
+    .export-btn { display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px; background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; color: var(--muted); font-size: 12px; font-weight: 500; font-family: inherit; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+    .export-btn:hover { background: var(--green-bg); color: var(--green-text); border-color: var(--green); }
+    .export-btn svg { flex-shrink: 0; }
+
     /* ── PV VIEW TABS (Pages / Bot Cadence) ── */
     .pv-view-tabs { display: flex; gap: 2px; background: var(--surface2); border: 1px solid var(--border); border-radius: 9px; padding: 2px; }
     .pv-view-tab { padding: 6px 16px; border: none; border-radius: 7px; font-size: 13px; font-weight: 500; font-family: inherit; cursor: pointer; background: transparent; color: var(--muted); transition: all 0.15s; }
@@ -490,7 +495,13 @@
       <div class="panel" style="margin-top:14px">
         <div class="panel-header">
           <span class="panel-title">Recent Hits</span>
-          <span id="hits-count-label" style="font-size:12px;color:var(--muted)"></span>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span id="hits-count-label" style="font-size:12px;color:var(--muted)"></span>
+            <button class="export-btn" onclick="exportHitsCsv()" title="Export all hits to Excel/CSV">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+              Export CSV
+            </button>
+          </div>
         </div>
         <div class="scroll-table">
           <table>
@@ -522,6 +533,10 @@
           <div class="pv-sub" id="pv-sub"></div>
         </div>
         <div style="margin-left:auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <button class="export-btn" id="pv-export-btn" onclick="exportPagesCsv()" title="Export pages to Excel/CSV">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+            Export CSV
+          </button>
           <div class="pv-view-tabs">
             <button class="pv-view-tab active" id="pvtab-pages" onclick="switchPvTab('pages')">Pages</button>
             <button class="pv-view-tab" id="pvtab-cadence" onclick="switchPvTab('cadence')">Bot Cadence</button>
@@ -567,7 +582,13 @@
         <div class="panel">
           <div class="panel-header">
             <span class="panel-title">Bot Crawl Cadence</span>
-            <span id="cadence-label" style="font-size:12px;color:var(--muted)"></span>
+            <div style="display:flex;align-items:center;gap:10px">
+              <span id="cadence-label" style="font-size:12px;color:var(--muted)"></span>
+              <button class="export-btn" onclick="exportCadenceCsv()" title="Export cadence data to Excel/CSV">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+                Export CSV
+              </button>
+            </div>
           </div>
           <div id="cadence-loading" class="empty">Loading cadence data…</div>
           <div id="cadence-cards"></div>
@@ -584,7 +605,13 @@
             <div class="pdp-title" id="pdp-title">Page Detail</div>
             <a class="pdp-url" id="pdp-url" href="#" target="_blank" rel="noopener"></a>
           </div>
-          <button class="pdp-close" onclick="closePdp()">✕</button>
+          <div style="display:flex;align-items:center;gap:8px">
+            <button class="export-btn" onclick="exportPdpCsv()" title="Export page detail to Excel/CSV">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+              Export CSV
+            </button>
+            <button class="pdp-close" onclick="closePdp()">✕</button>
+          </div>
         </div>
         <div class="pdp-body">
           <div class="pdp-stat-row" id="pdp-stats"></div>
@@ -677,6 +704,7 @@
   let _botsData = [];         // full byBot from last stats fetch
   let _activePvBot = '';      // bot name filter in pages view
   let _clientDomain = '';     // domain of currently selected client
+  let _pdpData = null;        // last loaded page detail payload
 
   // ── BOT COLOR PALETTE ──
   const BOT_COLORS = {
@@ -731,6 +759,75 @@
     document.querySelectorAll('.period-tab').forEach(t => t.classList.remove('active'));
     event.target.classList.add('active');
     loadClient();
+  }
+
+  // ── EXPORT UTILITIES ──
+  function downloadCsv(rows, filename) {
+    const csv = rows.map(r =>
+      r.map(v => '"' + String(v ?? '').replace(/"/g, '""') + '"').join(',')
+    ).join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function exportFromServer(type, filename) {
+    const clientId = document.getElementById('client-select').value;
+    if (!clientId) return;
+    const url = '/api/export/' + clientId + '?days=' + activeDays + '&type=' + type
+              + '&' + new URLSearchParams(authHeaders()).toString();
+    window.location.href = url + '&auth=' + btoa(password ? 'admin:' + password : '');
+  }
+
+  function exportHitsCsv() {
+    const clientId = document.getElementById('client-select').value;
+    if (!clientId) return;
+    const cname = (_clientsMap[clientId] || {}).name || 'client';
+    const base = '/api/export/' + clientId + '?days=' + activeDays + '&type=hits';
+    const authParam = '&auth=' + btoa('admin:' + password);
+    window.location.href = base + authParam;
+  }
+
+  function exportPagesCsv() {
+    if (!_pagesData.length) return;
+    const clientId = document.getElementById('client-select').value;
+    const base = '/api/export/' + clientId + '?days=' + activeDays + '&type=pages';
+    window.location.href = base + '&auth=' + btoa('admin:' + password);
+  }
+
+  function exportCadenceCsv() {
+    const clientId = document.getElementById('client-select').value;
+    if (!clientId) return;
+    const base = '/api/export/' + clientId + '?days=' + activeDays + '&type=cadence';
+    window.location.href = base + '&auth=' + btoa('admin:' + password);
+  }
+
+  function exportPdpCsv() {
+    if (!_pdpData) return;
+    const d = _pdpData;
+    const rows = [
+      ['Export: Page Detail — ' + d.url],
+      [],
+      ['Period', activeDays + ' days'],
+      ['Total Hits', d.total_hits],
+      [],
+      ['Bot Breakdown'],
+      ['Bot Name', 'Hits', 'Avg Interval (hours)', 'First Seen', 'Last Seen'],
+      ...d.byBot.map(b => [b.bot_name, b.hits, b.avg_interval_hours != null ? b.avg_interval_hours.toFixed(1) : 'N/A', b.first_seen, b.last_seen]),
+      [],
+      ['Daily Visits'],
+      ['Date', 'Hits'],
+      ...d.overTime.map(r => [r.date, r.hits]),
+      [],
+      ['Hourly Pattern (hits per hour 0-23)'],
+      ['Hour', 'Hits'],
+      ...d.hourlyPattern.map((v, i) => [i + ':00', v])
+    ];
+    const clientId = document.getElementById('client-select').value;
+    const cname = (_clientsMap[clientId] || {}).name || 'client';
+    downloadCsv(rows, 'page-detail-' + d.url.replace(/\//g, '_').replace(/^_/, '') + '-' + activeDays + 'd.csv');
   }
 
   // ── CLIENT CARDS ──
@@ -1069,16 +1166,19 @@
     const pillRow = document.getElementById('pv-bot-pills');
     const cadenceEl = document.getElementById('pv-cadence');
 
+    const pvExportBtn = document.getElementById('pv-export-btn');
     if (tab === 'pages') {
       pagesContent.style.display = 'block';
       tablePanel.style.display = 'block';
       pillRow.style.display = 'flex';
       cadenceEl.style.display = 'none';
+      if (pvExportBtn) { pvExportBtn.onclick = exportPagesCsv; pvExportBtn.title = 'Export pages to Excel/CSV'; }
     } else {
       pagesContent.style.display = 'none';
       tablePanel.style.display = 'none';
       pillRow.style.display = 'none';
       cadenceEl.style.display = 'block';
+      if (pvExportBtn) { pvExportBtn.onclick = exportCadenceCsv; pvExportBtn.title = 'Export cadence to Excel/CSV'; }
       loadCadenceView();
     }
   }
@@ -1262,6 +1362,7 @@
   }
 
   function renderPdp(data, fullUrl) {
+    _pdpData = data;
     // Title fetch
     if (_clientDomain) {
       fetch('/api/page-title?url=' + encodeURIComponent(fullUrl), { headers: authHeaders() })

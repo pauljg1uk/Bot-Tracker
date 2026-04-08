@@ -262,6 +262,111 @@ router.get("/page-detail/:clientId", auth, async (req, res) => {
   }
 });
 
+// ── GET /api/export/:clientId ─────────────────────────────────────────────
+router.get("/export/:clientId", auth, async (req, res) => {
+  const clientId = parseInt(req.params.clientId);
+  const days = parseInt((req.query.days as string) || "7");
+  const type = (req.query.type as string) || "hits";
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+  const csvRow = (values: (string | number | null | undefined)[]) =>
+    values.map((v) => `"${String(v ?? "").replace(/"/g, '""')}"`).join(",");
+
+  try {
+    if (type === "hits") {
+      const hits = await db
+        .select()
+        .from(botHitsTable)
+        .where(sql`${botHitsTable.client_id} = ${clientId} AND ${botHitsTable.timestamp} > ${since}`)
+        .orderBy(desc(botHitsTable.timestamp));
+
+      const header = csvRow(["Timestamp", "URL", "Bot Name", "User Agent", "Status Code", "Country", "Referrer"]);
+      const rows = hits.map((h) => csvRow([h.timestamp, h.url, h.bot_name, h.user_agent, h.status_code, h.country, h.referrer]));
+      const csv = "\uFEFF" + [header, ...rows].join("\n");
+
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader("Content-Disposition", `attachment; filename="bot-hits-${days}d.csv"`);
+      res.send(csv);
+      return;
+    }
+
+    if (type === "pages") {
+      const topPages = await db
+        .select({ url: botHitsTable.url, hits: count() })
+        .from(botHitsTable)
+        .where(sql`${botHitsTable.client_id} = ${clientId} AND ${botHitsTable.timestamp} > ${since}`)
+        .groupBy(botHitsTable.url)
+        .orderBy(desc(count()));
+
+      const prevSince = new Date(Date.now() - 2 * days * 24 * 60 * 60 * 1000);
+      const prevPages = await db
+        .select({ url: botHitsTable.url, hits: count() })
+        .from(botHitsTable)
+        .where(sql`${botHitsTable.client_id} = ${clientId} AND ${botHitsTable.timestamp} > ${prevSince} AND ${botHitsTable.timestamp} <= ${since}`)
+        .groupBy(botHitsTable.url);
+
+      const prevMap: Record<string, number> = {};
+      prevPages.forEach((p) => { prevMap[p.url] = Number(p.hits); });
+
+      const header = csvRow(["Rank", "URL", "Hits", "Previous Hits", "Change %"]);
+      const rows = topPages.map((p, i) => {
+        const curr = Number(p.hits);
+        const prev = prevMap[p.url] || 0;
+        const change = prev > 0 ? (((curr - prev) / prev) * 100).toFixed(1) : "New";
+        return csvRow([i + 1, p.url, curr, prev, change]);
+      });
+      const csv = "\uFEFF" + [header, ...rows].join("\n");
+
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader("Content-Disposition", `attachment; filename="pages-${days}d.csv"`);
+      res.send(csv);
+      return;
+    }
+
+    if (type === "cadence") {
+      const allHits = await db
+        .select({ bot_name: botHitsTable.bot_name, timestamp: botHitsTable.timestamp, url: botHitsTable.url })
+        .from(botHitsTable)
+        .where(sql`${botHitsTable.client_id} = ${clientId} AND ${botHitsTable.timestamp} > ${since}`)
+        .orderBy(botHitsTable.bot_name, botHitsTable.timestamp);
+
+      const botGroups: Record<string, { timestamps: Date[]; urls: string[] }> = {};
+      allHits.forEach((h) => {
+        if (!botGroups[h.bot_name]) botGroups[h.bot_name] = { timestamps: [], urls: [] };
+        botGroups[h.bot_name].timestamps.push(new Date(h.timestamp as string));
+        botGroups[h.bot_name].urls.push(h.url);
+      });
+
+      const header = csvRow(["Bot", "Total Hits", "Visits/Day", "Avg Interval (hours)", "Peak Hour", "First Seen", "Last Seen", "Top Page"]);
+      const rows = Object.entries(botGroups).map(([bot_name, { timestamps, urls }]) => {
+        timestamps.sort((a, b) => a.getTime() - b.getTime());
+        const intervals: number[] = [];
+        for (let i = 1; i < timestamps.length; i++) intervals.push((timestamps[i].getTime() - timestamps[i - 1].getTime()) / 3600000);
+        const avgInterval = intervals.length > 0 ? (intervals.reduce((a, b) => a + b, 0) / intervals.length).toFixed(1) : "N/A";
+        const vpd = (timestamps.length / days).toFixed(1);
+        const hourCounts = new Array(24).fill(0);
+        timestamps.forEach((ts) => { hourCounts[ts.getHours()]++; });
+        const peakHour = hourCounts.indexOf(Math.max(...hourCounts));
+        const pageCounts: Record<string, number> = {};
+        urls.forEach((u) => { pageCounts[u] = (pageCounts[u] || 0) + 1; });
+        const topPage = Object.entries(pageCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "";
+        return csvRow([bot_name, timestamps.length, vpd, avgInterval, `${peakHour}:00`, timestamps[0].toISOString(), timestamps[timestamps.length - 1].toISOString(), topPage]);
+      }).sort();
+
+      const csv = "\uFEFF" + [header, ...rows].join("\n");
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader("Content-Disposition", `attachment; filename="bot-cadence-${days}d.csv"`);
+      res.send(csv);
+      return;
+    }
+
+    res.status(400).json({ error: "Unknown type" });
+  } catch (err) {
+    req.log.error({ err }, "Export failed");
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 // ── POST /api/seed/:clientId (admin only, add realistic demo hits) ─────────
 router.post("/seed/:clientId", auth, async (req, res) => {
   const clientId = parseInt(req.params.clientId);
