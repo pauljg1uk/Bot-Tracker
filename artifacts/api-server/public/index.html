@@ -73,19 +73,36 @@
     /* ── MAIN ── */
     .main { padding: 24px 28px; max-width: 1260px; margin: 0 auto; }
 
+    /* ── SHORTCUT CARDS ── */
+    .shortcut-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px; }
+    @media (max-width: 640px) { .shortcut-row { grid-template-columns: 1fr; } }
+    .shortcut-card { display: flex; align-items: center; gap: 16px; background: var(--surface); border: 1.5px solid var(--border); border-radius: 14px; padding: 18px 20px; cursor: pointer; transition: all 0.15s; text-align: left; font-family: inherit; }
+    .shortcut-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(74,125,99,0.12); }
+    .sc-pages:hover { border-color: var(--green); }
+    .sc-cadence:hover { border-color: #6b4fbb; }
+    .sc-icon { width: 44px; height: 44px; background: var(--green-bg); border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .sc-icon svg { width: 22px; height: 22px; fill: var(--green); }
+    .sc-icon-cadence { background: #f0ebff; }
+    .sc-icon-cadence svg { fill: #6b4fbb; }
+    .sc-body { flex: 1; min-width: 0; }
+    .sc-title { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; margin-bottom: 3px; }
+    .sc-sub { font-size: 12px; color: var(--muted); line-height: 1.4; }
+    .sc-arrow { font-size: 20px; color: var(--muted2); flex-shrink: 0; transition: transform 0.15s; }
+    .shortcut-card:hover .sc-arrow { transform: translateX(3px); }
+
     /* ── KPI CARDS ── */
     .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
     @media (max-width: 900px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
-    .kpi-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px 22px; position: relative; overflow: hidden; }
-    .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
+    .kpi-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 22px 24px 20px; position: relative; overflow: hidden; }
+    .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
     .kpi-card.green::before { background: var(--green); }
     .kpi-card.blue::before { background: #4a8fd4; }
     .kpi-card.purple::before { background: #8b6bd4; }
     .kpi-card.amber::before { background: #c49a2a; }
-    .kpi-label { font-size: 11px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 8px; }
-    .kpi-value { font-size: 32px; font-weight: 700; letter-spacing: -0.03em; line-height: 1; margin-bottom: 8px; }
+    .kpi-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; }
+    .kpi-value { font-size: 42px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; margin-bottom: 12px; }
     .kpi-footer { display: flex; align-items: center; gap: 6px; }
-    .kpi-trend { display: inline-flex; align-items: center; gap: 3px; font-size: 12px; font-weight: 600; padding: 2px 7px; border-radius: 20px; }
+    .kpi-trend { display: inline-flex; align-items: center; gap: 3px; font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: 20px; }
     .kpi-trend.up { color: var(--green); background: var(--green-bg); }
     .kpi-trend.down { color: var(--red); background: var(--red-bg); }
     .kpi-trend.neutral { color: var(--muted); background: var(--surface2); }
@@ -373,6 +390,30 @@
 
     <div id="dashboard" style="display:none">
 
+      <!-- QUICK NAV SHORTCUTS -->
+      <div class="shortcut-row" id="shortcut-row" style="display:none">
+        <div class="shortcut-card sc-pages" onclick="openPagesView()">
+          <div class="sc-icon">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 7V3.5L18.5 9H13zm-3 8l-2-2 2-2v1h3v1h-3v2zm5 0v-1h-3v-1h3v-2l2 2-2 2z"/></svg>
+          </div>
+          <div class="sc-body">
+            <div class="sc-title">Top Pages</div>
+            <div class="sc-sub">See which pages bots crawl most, rank movements &amp; per-page cadence</div>
+          </div>
+          <div class="sc-arrow">→</div>
+        </div>
+        <div class="shortcut-card sc-cadence" onclick="openCadenceDirectly()">
+          <div class="sc-icon sc-icon-cadence">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>
+          </div>
+          <div class="sc-body">
+            <div class="sc-title">Bot Cadence</div>
+            <div class="sc-sub">How often each AI crawler returns, average interval &amp; peak hours</div>
+          </div>
+          <div class="sc-arrow">→</div>
+        </div>
+      </div>
+
       <!-- KPI CARDS -->
       <div class="kpi-grid">
         <div class="kpi-card green">
@@ -608,6 +649,24 @@
   </div>
 </div>
 
+<!-- EDIT CLIENT MODAL -->
+<div class="modal" id="edit-client-modal">
+  <div class="modal-box" style="width:420px">
+    <h2>Edit Client</h2>
+    <p class="modal-sub">Update the client name or domain.</p>
+    <input type="hidden" id="edit-client-id" />
+    <div class="field-label">Client Name</div>
+    <input type="text" id="edit-client-name" placeholder="e.g. Salon Iris" />
+    <div class="field-label">Website Domain</div>
+    <input type="text" id="edit-client-domain" placeholder="e.g. saloniris.co.uk" />
+    <p id="edit-client-error" style="color:var(--red);font-size:13px;margin-bottom:8px"></p>
+    <div class="modal-actions">
+      <button class="btn-primary" id="edit-save-btn" onclick="saveEditClient()">Save Changes</button>
+      <button class="btn-ghost" onclick="closeModal('edit-client-modal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <script>
   // ── STATE ──
   let password = '';
@@ -763,6 +822,7 @@
     }
     document.getElementById('dashboard').style.display = 'block';
     document.getElementById('no-client').style.display = 'none';
+    document.getElementById('shortcut-row').style.display = 'grid';
     _clientDomain = normaliseDomain((_clientsMap[clientId] || {}).domain);
 
     Promise.all([
@@ -1065,6 +1125,13 @@
     _activePvBot = '';
   }
 
+  function openCadenceDirectly() {
+    // Open pages view and immediately switch to cadence tab
+    if (!_pagesData.length) return;
+    openPagesView();
+    switchPvTab('cadence');
+  }
+
   function renderPagesView(allPages, botFilter) {
     // If bot filter active, filter and recalculate hits from that bot only
     let pages = allPages;
@@ -1236,7 +1303,7 @@
       ? data.byBot.map(b => {
           const c = botColor(b.bot_name);
           const interval = formatInterval(b.avg_interval_hours);
-          const lastSeen = timeAgo(b.last_seen);
+          const lastSeen = relativeTime(b.last_seen);
           return `<div class="pdp-bot-row">
             <span style="width:10px;height:10px;border-radius:50%;background:${c};flex-shrink:0"></span>
             <div style="flex:1">
@@ -1412,17 +1479,54 @@
           list.innerHTML = '<div class="empty">No clients yet</div>';
         } else {
           list.innerHTML = clients.map(c => `
-            <div class="client-item">
-              <div>
+            <div class="client-item" id="ci-${c.id}">
+              <div style="flex:1;min-width:0">
                 <div class="client-item-name">${escHtml(c.name)}</div>
                 <div class="client-item-domain">${escHtml(c.domain)}</div>
                 <div class="client-item-key">${escHtml(c.api_key)}</div>
               </div>
-              <button class="btn-danger" onclick="deleteClient(${c.id}, this)">Delete</button>
+              <div style="display:flex;gap:6px;flex-shrink:0">
+                <button class="btn-sm-ghost" style="padding:5px 12px;font-size:12px" onclick="openEditClient(${c.id})">Edit</button>
+                <button class="btn-danger" onclick="deleteClient(${c.id}, this)">Delete</button>
+              </div>
             </div>`).join('');
         }
         document.getElementById('manage-clients-modal').classList.add('open');
       });
+  }
+
+  function openEditClient(id) {
+    const c = _clientsMap[id];
+    if (!c) return;
+    document.getElementById('edit-client-id').value = id;
+    document.getElementById('edit-client-name').value = c.name;
+    document.getElementById('edit-client-domain').value = c.domain;
+    document.getElementById('edit-client-error').textContent = '';
+    document.getElementById('edit-client-modal').classList.add('open');
+  }
+
+  function saveEditClient() {
+    const id = document.getElementById('edit-client-id').value;
+    const name = document.getElementById('edit-client-name').value.trim();
+    const domain = document.getElementById('edit-client-domain').value.trim();
+    const errEl = document.getElementById('edit-client-error');
+    if (!name || !domain) { errEl.textContent = 'Both fields are required'; return; }
+    errEl.textContent = '';
+    const btn = document.getElementById('edit-save-btn');
+    btn.disabled = true; btn.textContent = 'Saving…';
+    fetch('/api/clients/' + id, {
+      method: 'PUT',
+      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, domain })
+    }).then(r => r.json())
+      .then(updated => {
+        _clientsMap[updated.id] = updated;
+        btn.disabled = false; btn.textContent = 'Save Changes';
+        document.getElementById('edit-client-modal').classList.remove('open');
+        loadClients();
+        openManageClients();
+      })
+      .catch(() => { btn.disabled = false; btn.textContent = 'Save Changes'; errEl.textContent = 'Failed to save'; });
   }
 
   function deleteClient(id, btn) {

@@ -47,6 +47,24 @@ router.post("/clients", auth, async (req, res) => {
   }
 });
 
+router.put("/clients/:id", auth, async (req, res) => {
+  const id = parseInt(req.params.id);
+  const { name, domain } = req.body as { name: string; domain: string };
+  if (!name || !domain) { res.status(400).json({ error: "name and domain required" }); return; }
+  try {
+    const [updated] = await db
+      .update(clientsTable)
+      .set({ name: name.trim(), domain: domain.trim() })
+      .where(eq(clientsTable.id, id))
+      .returning();
+    if (!updated) { res.status(404).json({ error: "Not found" }); return; }
+    res.json(updated);
+  } catch (err) {
+    req.log.error({ err }, "Failed to update client");
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 router.delete("/clients/:id", auth, async (req, res) => {
   const id = parseInt(req.params.id);
   try {

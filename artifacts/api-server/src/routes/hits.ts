@@ -262,6 +262,43 @@ router.get("/page-detail/:clientId", auth, async (req, res) => {
   }
 });
 
+// ── POST /api/seed/:clientId (admin only, add realistic demo hits) ─────────
+router.post("/seed/:clientId", auth, async (req, res) => {
+  const clientId = parseInt(req.params.clientId);
+  const days = 30;
+
+  const bots = [
+    { name: "GPTBot",             intervalH: 4,   pages: ["/", "/services", "/blog/best-salons-2025", "/about", "/pricing"] },
+    { name: "ClaudeBot",          intervalH: 8,   pages: ["/", "/about", "/services", "/team", "/contact"] },
+    { name: "PerplexityBot",      intervalH: 12,  pages: ["/services", "/contact", "/", "/about", "/faq"] },
+    { name: "Google-Extended",    intervalH: 24,  pages: ["/", "/about", "/services", "/blog/best-salons-2025"] },
+    { name: "Bytespider",         intervalH: 36,  pages: ["/services", "/contact", "/about", "/"] },
+    { name: "Meta-ExternalAgent", intervalH: 48,  pages: ["/", "/about", "/services"] },
+  ];
+
+  const now = Date.now();
+  const rows: { client_id: number; url: string; bot_name: string; user_agent: string; status_code: number; timestamp: Date }[] = [];
+
+  for (const bot of bots) {
+    let t = now - days * 24 * 3600 * 1000;
+    while (t < now) {
+      const jitter = (Math.random() - 0.5) * bot.intervalH * 0.4 * 3600 * 1000;
+      t += bot.intervalH * 3600 * 1000 + jitter;
+      if (t >= now) break;
+      const url = bot.pages[Math.floor(Math.random() * bot.pages.length)];
+      rows.push({ client_id: clientId, url, bot_name: bot.name, user_agent: `${bot.name}/1.0`, status_code: 200, timestamp: new Date(t) });
+    }
+  }
+
+  try {
+    await db.insert(botHitsTable).values(rows);
+    res.json({ inserted: rows.length });
+  } catch (err) {
+    req.log.error({ err }, "Seed failed");
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 // ── GET /api/hits/:clientId ────────────────────────────────────────────────
 router.get("/hits/:clientId", auth, async (req, res) => {
   const clientId = parseInt(req.params.clientId);
