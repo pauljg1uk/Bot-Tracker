@@ -486,25 +486,50 @@
 
       const instructions = document.getElementById('setup-instructions');
       instructions.style.display = 'block';
+
+      const code = (t) => `<code style="background:var(--bg);border:1px solid var(--border);padding:1px 6px;border-radius:4px;font-size:11px;color:var(--green-text);font-family:monospace">${escHtml(t)}</code>`;
+      const step = (n, html) => `<div style="display:flex;gap:10px;margin-bottom:10px"><span style="flex-shrink:0;width:20px;height:20px;background:var(--green-bg);border:1px solid var(--border);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--green-text)">${n}</span><div>${html}</div></div>`;
+
       if (tracking_method === 'cloudflare') {
         instructions.innerHTML = `
-          <strong style="color:var(--text);display:block;margin-bottom:6px">Cloudflare Worker setup</strong>
-          1. Go to <strong>Cloudflare → Workers → Create Worker</strong><br>
-          2. Paste the Cloudflare Worker script<br>
-          3. Set <code style="background:var(--bg);padding:1px 5px;border-radius:4px;color:var(--green-text)">CLIENT_API_KEY</code> to the key above<br>
-          4. Add a route for <code style="background:var(--bg);padding:1px 5px;border-radius:4px;color:var(--green-text)">${escHtml(domain)}/*</code>
+          <strong style="display:block;margin-bottom:12px;color:var(--text)">Cloudflare Worker setup</strong>
+          ${step(1, `Go to <strong>Cloudflare → Workers → Create Worker</strong>`)}
+          ${step(2, `Paste the worker script and set ${code('CLIENT_API_KEY')} to the key above`)}
+          ${step(3, `Add a route for ${code(domain + '/*')}`)}
         `;
       } else {
+        const htaccessLine = `php_value auto_prepend_file "/home/USERNAME/public_html/bot-tracker.php"`;
         instructions.innerHTML = `
-          <strong style="color:var(--text);display:block;margin-bottom:6px">PHP / .htaccess setup</strong>
-          1. Upload <code style="background:var(--bg);padding:1px 5px;border-radius:4px;color:var(--green-text)">bot-tracker.php</code> to your site root<br>
-          2. Set <code style="background:var(--bg);padding:1px 5px;border-radius:4px;color:var(--green-text)">CLIENT_API_KEY</code> to the key above<br>
-          3. Add to the top of <code style="background:var(--bg);padding:1px 5px;border-radius:4px;color:var(--green-text)">.htaccess</code>:<br>
-          <code style="display:block;margin-top:6px;background:var(--bg);padding:6px 10px;border-radius:6px;color:var(--green-text);font-size:11px;word-break:break-all">php_value auto_prepend_file "/home/USERNAME/public_html/bot-tracker.php"</code>
+          <strong style="display:block;margin-bottom:12px;color:var(--text)">PHP / .htaccess setup</strong>
+          ${step(1, `<div style="margin-bottom:8px">Download the pre-configured PHP file (your API key is already embedded) and upload it to the site root — same folder as ${code('wp-config.php')} or ${code('index.php')}.</div>
+            <button onclick="downloadPHP('${client.id}')" style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:var(--green);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer">
+              ↓ Download bot-tracker.php
+            </button>`)}
+          ${step(2, `<div style="margin-bottom:8px">Add this line to the <strong>top</strong> of ${code('.htaccess')} — update USERNAME to match the actual server path (visible in cPanel File Manager).</div>
+            <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-family:monospace;font-size:11px;color:var(--green-text);word-break:break-all;margin-bottom:8px" id="htaccess-line">${escHtml(htaccessLine)}</div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <button onclick="copyHtaccess()" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;color:var(--muted);font-size:12px;font-weight:500;font-family:inherit;cursor:pointer">
+                Copy .htaccess line
+              </button>
+              <span id="copy-confirm" style="display:none;color:var(--green);font-size:12px;font-weight:500">Copied!</span>
+            </div>`)}
         `;
       }
 
       loadClients();
+    });
+  }
+
+  function downloadPHP(clientId) {
+    window.location.href = `/api/clients/${clientId}/php-script?auth=${btoa('admin:' + password)}`;
+  }
+
+  function copyHtaccess() {
+    const text = document.getElementById('htaccess-line').textContent;
+    navigator.clipboard.writeText(text).then(() => {
+      const confirm = document.getElementById('copy-confirm');
+      confirm.style.display = 'inline';
+      setTimeout(() => { confirm.style.display = 'none'; }, 2000);
     });
   }
 

@@ -14,6 +14,7 @@ router.get("/clients", auth, async (req, res) => {
         name: clientsTable.name,
         domain: clientsTable.domain,
         api_key: clientsTable.api_key,
+        tracking_method: clientsTable.tracking_method,
         created_at: clientsTable.created_at,
       })
       .from(clientsTable)
@@ -53,6 +54,94 @@ router.delete("/clients/:id", auth, async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     req.log.error({ err }, "Failed to delete client");
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+router.get("/clients/:clientId/php-script", auth, async (req, res) => {
+  try {
+    const [client] = await db
+      .select()
+      .from(clientsTable)
+      .where(eq(clientsTable.id, parseInt(req.params.clientId)))
+      .limit(1);
+
+    if (!client) {
+      res.status(404).json({ error: "Client not found" });
+      return;
+    }
+
+    const domains = process.env.REPLIT_DOMAINS ?? "";
+    const primaryDomain = domains.split(",")[0]?.trim() ?? "";
+    const replitUrl = primaryDomain ? `https://${primaryDomain}` : "https://YOUR-APP-URL";
+
+    const phpScript = `<?php
+// AI Bot Tracker — Befound Search
+// Client: ${client.name} (${client.domain})
+// Auto-generated — do not edit API key
+
+define('TRACKER_API', '${replitUrl}/api/hit');
+define('CLIENT_API_KEY', '${client.api_key}');
+
+$AI_BOTS = [
+  'GPTBot'             => 'GPTBot',
+  'ChatGPT-User'       => 'ChatGPT-User',
+  'ClaudeBot'          => 'ClaudeBot',
+  'Anthropic'          => 'anthropic-ai',
+  'Google-Extended'    => 'Google-Extended',
+  'PerplexityBot'      => 'PerplexityBot',
+  'Bytespider'         => 'Bytespider',
+  'CCBot'              => 'CCBot',
+  'Meta-ExternalAgent' => 'Meta-ExternalAgent',
+  'Cohere'             => 'cohere-ai',
+  'YouBot'             => 'YouBot',
+  'Diffbot'            => 'Diffbot',
+  'Applebot-Extended'  => 'Applebot-Extended',
+];
+
+$userAgent = ${'$_SERVER'}['HTTP_USER_AGENT'] ?? '';
+$matchedBot = null;
+
+foreach ($AI_BOTS as $name => $pattern) {
+  if (stripos($userAgent, $pattern) !== false) {
+    $matchedBot = $name;
+    break;
+  }
+}
+
+if ($matchedBot) {
+  $url      = ${'$_SERVER'}['REQUEST_URI'] ?? '/';
+  $referrer = ${'$_SERVER'}['HTTP_REFERER'] ?? null;
+  $country  = ${'$_SERVER'}['HTTP_CF_IPCOUNTRY'] ?? null;
+
+  $payload = json_encode([
+    'api_key'     => CLIENT_API_KEY,
+    'url'         => $url,
+    'bot_name'    => $matchedBot,
+    'user_agent'  => $userAgent,
+    'status_code' => http_response_code(),
+    'country'     => $country,
+    'referrer'    => $referrer
+  ]);
+
+  $context = stream_context_create([
+    'http' => [
+      'method'  => 'POST',
+      'header'  => "Content-Type: application/json\\r\\nContent-Length: " . strlen($payload),
+      'content' => $payload,
+      'timeout' => 2
+    ]
+  ]);
+
+  @file_get_contents(TRACKER_API, false, $context);
+}
+`;
+
+    res.setHeader("Content-Type", "application/octet-stream");
+    res.setHeader("Content-Disposition", `attachment; filename="bot-tracker.php"`);
+    res.send(phpScript);
+  } catch (err) {
+    req.log.error({ err }, "Failed to generate PHP script");
     res.status(500).json({ error: "Server error" });
   }
 });
