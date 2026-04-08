@@ -196,10 +196,87 @@
     .pg-hits-sub { font-size: 11px; color: var(--muted); font-weight: 400; }
     .pg-bots-cell { }
 
+    /* ── CLIENT CARDS ── */
+    #no-client { padding: 40px 0; }
+    .client-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+    .client-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px 22px; cursor: pointer; transition: all 0.15s; position: relative; overflow: hidden; }
+    .client-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--green); opacity: 0; transition: opacity 0.15s; }
+    .client-card:hover { border-color: var(--green); box-shadow: 0 4px 16px rgba(74,125,99,0.12); transform: translateY(-1px); }
+    .client-card:hover::before { opacity: 1; }
+    .cc-name { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; margin-bottom: 4px; }
+    .cc-domain { font-size: 12px; color: var(--green-text); font-family: monospace; margin-bottom: 12px; }
+    .cc-meta { display: flex; align-items: center; justify-content: space-between; }
+    .cc-hits { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; color: var(--text); }
+    .cc-hits-label { font-size: 11px; color: var(--muted); font-weight: 500; margin-top: 2px; }
+    .cc-since { font-size: 11px; color: var(--muted); }
+    .cc-icon { width: 36px; height: 36px; background: var(--green-bg); border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+    .cc-icon svg { width: 18px; height: 18px; fill: var(--green); }
+    #no-client-empty { color: var(--muted); padding: 80px 0; font-size: 14px; text-align: center; }
+    #no-client-empty strong { display: block; font-size: 20px; font-weight: 600; color: var(--muted2); margin-bottom: 8px; }
+
+    /* ── PV VIEW TABS (Pages / Bot Cadence) ── */
+    .pv-view-tabs { display: flex; gap: 2px; background: var(--surface2); border: 1px solid var(--border); border-radius: 9px; padding: 2px; }
+    .pv-view-tab { padding: 6px 16px; border: none; border-radius: 7px; font-size: 13px; font-weight: 500; font-family: inherit; cursor: pointer; background: transparent; color: var(--muted); transition: all 0.15s; }
+    .pv-view-tab.active { background: var(--surface); color: var(--text); font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .pv-view-tab:hover:not(.active) { color: var(--text); }
+
+    /* ── BOT PILL FILTER ── */
+    .pv-bot-pills-row { display: flex; align-items: center; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
+    .bot-pill { display: inline-flex; align-items: center; gap: 5px; padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface); color: var(--muted); font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.15s; font-family: inherit; }
+    .bot-pill:hover { border-color: var(--border2); color: var(--text); }
+    .bot-pill.active { background: var(--text); color: #fff; border-color: var(--text); }
+    .bot-pill .pill-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+
+    /* ── CADENCE CARDS ── */
+    .cadence-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+    .cadence-card { border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px; background: var(--surface2); }
+    .cadence-card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+    .cadence-bot-name { font-size: 15px; font-weight: 700; }
+    .cadence-total { margin-left: auto; font-size: 20px; font-weight: 700; }
+    .cadence-total-label { font-size: 10px; color: var(--muted); font-weight: 500; text-align: right; }
+    .cadence-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+    .cadence-stat { text-align: center; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 8px; }
+    .cadence-stat-val { font-size: 16px; font-weight: 700; letter-spacing: -0.02em; }
+    .cadence-stat-lbl { font-size: 10px; color: var(--muted); font-weight: 500; margin-top: 3px; }
+    .cadence-hourly { display: flex; align-items: flex-end; gap: 2px; height: 36px; margin-bottom: 14px; }
+    .cadence-hour-bar { flex: 1; border-radius: 2px 2px 0 0; min-height: 2px; transition: height 0.3s; }
+    .cadence-insight { font-size: 12px; color: var(--muted); background: var(--green-bg); border-radius: 8px; padding: 8px 12px; line-height: 1.5; }
+    .cadence-top-pages { margin-top: 12px; }
+    .cadence-top-pages-title { font-size: 10px; font-weight: 600; color: var(--muted2); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 8px; }
+    .cadence-page-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+    .cadence-page-row:last-child { border: none; }
+    .cadence-page-url { font-family: monospace; color: var(--muted2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .cadence-page-hits { font-weight: 600; flex-shrink: 0; }
+
+    /* ── PAGE DETAIL PANEL ── */
+    .pdp-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(3px); z-index: 200; justify-content: flex-end; }
+    .pdp-overlay.open { display: flex; }
+    .pdp-box { width: 520px; max-width: 100vw; background: var(--surface); height: 100%; overflow-y: auto; box-shadow: -4px 0 32px rgba(0,0,0,0.15); display: flex; flex-direction: column; }
+    .pdp-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 24px 24px 16px; border-bottom: 1px solid var(--border); }
+    .pdp-title { font-size: 16px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 4px; }
+    .pdp-url { font-size: 12px; font-family: monospace; color: var(--green-text); text-decoration: none; }
+    .pdp-url:hover { text-decoration: underline; }
+    .pdp-close { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; width: 32px; height: 32px; font-size: 16px; cursor: pointer; color: var(--muted); flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
+    .pdp-close:hover { background: var(--border); color: var(--text); }
+    .pdp-body { padding: 20px 24px; flex: 1; }
+    .pdp-stat-row { display: flex; gap: 10px; margin-bottom: 20px; }
+    .pdp-stat { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 14px 14px 12px; }
+    .pdp-stat-val { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+    .pdp-stat-lbl { font-size: 11px; color: var(--muted); font-weight: 500; margin-top: 3px; }
+    .pdp-section-title { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 10px; }
+    .pdp-timeline { display: flex; align-items: flex-end; gap: 4px; height: 60px; }
+    .pdp-tbar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; justify-content: flex-end; }
+    .pdp-tbar { width: 100%; background: var(--green); border-radius: 3px 3px 0 0; min-height: 3px; opacity: 0.75; }
+    .pdp-tbar-lbl { font-size: 8px; color: var(--muted); white-space: nowrap; }
+    .pdp-hourly { display: flex; align-items: flex-end; gap: 2px; height: 50px; }
+    .pdp-hbar { flex: 1; background: var(--green); border-radius: 2px 2px 0 0; min-height: 2px; opacity: 0.6; }
+    .pdp-hbar:hover { opacity: 1; }
+    .pdp-bot-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 8px; }
+    .pdp-bot-hits { font-size: 20px; font-weight: 700; margin-left: auto; }
+    .pdp-bot-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
     /* ── MISC ── */
     .empty { color: var(--muted); font-size: 13px; padding: 28px 0; text-align: center; }
-    #no-client { color: var(--muted); padding: 80px 0; font-size: 14px; text-align: center; }
-    #no-client strong { display: block; font-size: 20px; font-weight: 600; color: var(--muted2); margin-bottom: 8px; }
 
     /* ── MODALS ── */
     .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); align-items: center; justify-content: center; z-index: 100; }
@@ -267,6 +344,7 @@
       <button class="period-tab" onclick="setPeriod(3)">3d</button>
       <button class="period-tab active" onclick="setPeriod(7)">7d</button>
       <button class="period-tab" onclick="setPeriod(30)">30d</button>
+      <button class="period-tab" onclick="setPeriod(60)">60d</button>
     </div>
     <div class="header-sep"></div>
     <button class="btn-sm" onclick="openAddClient()">+ Add Client</button>
@@ -275,8 +353,22 @@
 
   <div class="main">
     <div id="no-client">
-      <strong>No client selected</strong>
-      Select a client above to view their AI bot analytics.
+      <div id="client-cards-grid" style="display:none">
+        <div style="margin-bottom:24px">
+          <div style="font-size:22px;font-weight:700;letter-spacing:-0.02em;margin-bottom:6px">Select a client</div>
+          <div style="font-size:14px;color:var(--muted)">Choose a website to view its AI crawler analytics</div>
+        </div>
+        <div id="client-cards" class="client-cards"></div>
+        <div style="margin-top:24px;text-align:center">
+          <button class="btn-sm" onclick="openAddClient()">+ Add New Client</button>
+        </div>
+      </div>
+      <div id="no-client-empty" style="display:none">
+        <strong>No clients yet</strong>
+        Add your first client to start tracking AI bot activity.
+        <br><br>
+        <button class="btn-sm" onclick="openAddClient()">+ Add Client</button>
+      </div>
     </div>
 
     <div id="dashboard" style="display:none">
@@ -388,13 +480,15 @@
           <div class="pv-title" id="pv-title">Pages Analysis</div>
           <div class="pv-sub" id="pv-sub"></div>
         </div>
-        <div class="pv-filters" style="margin-left:auto">
-          <span style="font-size:12px;color:var(--muted);font-weight:500">Filter by bot:</span>
-          <select class="pv-bot-filter" id="pv-bot-select" onchange="applyPageBotFilter()">
-            <option value="">All Bots</option>
-          </select>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <div class="pv-view-tabs">
+            <button class="pv-view-tab active" id="pvtab-pages" onclick="switchPvTab('pages')">Pages</button>
+            <button class="pv-view-tab" id="pvtab-cadence" onclick="switchPvTab('cadence')">Bot Cadence</button>
+          </div>
         </div>
       </div>
+      <!-- Bot pill filter — shown in pages sub-view only -->
+      <div id="pv-bot-pills" class="pv-bot-pills-row"></div>
 
       <!-- Horizontal rank chart -->
       <div class="panel">
@@ -427,7 +521,41 @@
           </table>
         </div>
       </div>
+      <!-- CADENCE VIEW (hidden by default) -->
+      <div id="pv-cadence" style="display:none">
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">Bot Crawl Cadence</span>
+            <span id="cadence-label" style="font-size:12px;color:var(--muted)"></span>
+          </div>
+          <div id="cadence-loading" class="empty">Loading cadence data…</div>
+          <div id="cadence-cards"></div>
+        </div>
+      </div>
+
     </div><!-- /pages-view -->
+
+    <!-- PAGE DETAIL PANEL -->
+    <div id="page-detail-panel" class="pdp-overlay" onclick="if(event.target===this)closePdp()">
+      <div class="pdp-box">
+        <div class="pdp-header">
+          <div>
+            <div class="pdp-title" id="pdp-title">Page Detail</div>
+            <a class="pdp-url" id="pdp-url" href="#" target="_blank" rel="noopener"></a>
+          </div>
+          <button class="pdp-close" onclick="closePdp()">✕</button>
+        </div>
+        <div class="pdp-body">
+          <div class="pdp-stat-row" id="pdp-stats"></div>
+          <div class="pdp-section-title">Daily Visits</div>
+          <div class="pdp-timeline" id="pdp-timeline"></div>
+          <div class="pdp-section-title" style="margin-top:18px">Activity by Hour of Day</div>
+          <div class="pdp-hourly" id="pdp-hourly"></div>
+          <div class="pdp-section-title" style="margin-top:18px">Per-Bot Breakdown</div>
+          <div id="pdp-bots"></div>
+        </div>
+      </div>
+    </div>
 
   </div><!-- /main -->
 </div><!-- /app -->
@@ -546,7 +674,54 @@
     loadClient();
   }
 
-  // ── CLIENTS ──
+  // ── CLIENT CARDS ──
+  function renderClientCards(clients) {
+    const grid = document.getElementById('client-cards-grid');
+    const empty = document.getElementById('no-client-empty');
+    const cardsEl = document.getElementById('client-cards');
+
+    if (!clients.length) {
+      grid.style.display = 'none';
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+    grid.style.display = 'block';
+
+    cardsEl.innerHTML = clients.map(c => {
+      const domain = (c.domain || '').replace(/^https?:\/\//, '');
+      return `<div class="client-card" onclick="selectClientCard(${c.id})">
+        <div class="cc-name">${escHtml(c.name)}</div>
+        <div class="cc-domain">${escHtml(domain)}</div>
+        <div class="cc-meta">
+          <div>
+            <div class="cc-hits" id="cc-hits-${c.id}">—</div>
+            <div class="cc-hits-label">hits (7d)</div>
+          </div>
+          <div class="cc-icon">
+            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+
+    // Async-load hit counts per card
+    clients.forEach(c => {
+      fetch('/api/stats/' + c.id + '?days=7', { headers: authHeaders() })
+        .then(r => r.json())
+        .then(s => {
+          const el = document.getElementById('cc-hits-' + c.id);
+          if (el) el.textContent = (s.total || 0).toLocaleString();
+        }).catch(() => {});
+    });
+  }
+
+  function selectClientCard(id) {
+    const sel = document.getElementById('client-select');
+    sel.value = id;
+    loadClient();
+  }
+
   function normaliseDomain(raw) {
     let d = (raw || '').trim();
     if (!d) return '';
@@ -569,7 +744,12 @@
           o.textContent = c.name + ' — ' + c.domain;
           sel.appendChild(o);
         });
-        if (cur) { sel.value = cur; if (sel.value) loadClient(); }
+        if (cur) {
+          sel.value = cur;
+          if (sel.value) { loadClient(); return; }
+        }
+        // No client selected — show card grid
+        renderClientCards(clients);
       });
   }
 
@@ -591,6 +771,7 @@
     ]).then(([stats, hits]) => {
       _pagesData = stats.topPages || [];
       _botsData = stats.byBot || [];
+      _cadenceLoaded = false; _cadenceData = null;
       renderKPIs(stats);
       renderChart(stats.overTime, activeDays);
       renderBotRoster(stats.byBot, stats.total);
@@ -819,41 +1000,69 @@
     el.innerHTML = html;
   }
 
-  // ── PAGES VIEW ──
+  // ── PAGES VIEW TAB SWITCHING ──
+  function switchPvTab(tab) {
+    document.getElementById('pvtab-pages').classList.toggle('active', tab === 'pages');
+    document.getElementById('pvtab-cadence').classList.toggle('active', tab === 'cadence');
+    const pagesContent = document.getElementById('pv-rank-chart').closest('.panel');
+    const tablePanel = document.getElementById('pv-table-body').closest('.panel');
+    const pillRow = document.getElementById('pv-bot-pills');
+    const cadenceEl = document.getElementById('pv-cadence');
+
+    if (tab === 'pages') {
+      pagesContent.style.display = 'block';
+      tablePanel.style.display = 'block';
+      pillRow.style.display = 'flex';
+      cadenceEl.style.display = 'none';
+    } else {
+      pagesContent.style.display = 'none';
+      tablePanel.style.display = 'none';
+      pillRow.style.display = 'none';
+      cadenceEl.style.display = 'block';
+      loadCadenceView();
+    }
+  }
+
   function openPagesView() {
     if (!_pagesData.length) return;
     document.getElementById('dashboard').style.display = 'none';
     document.getElementById('pages-view').style.display = 'block';
     window.scrollTo(0, 0);
+    _activePvBot = '';
 
     const clientId = document.getElementById('client-select').value;
     const clientName = (_clientsMap[clientId] || {}).name || 'Client';
-    const periodLabel = { 1: 'last 24h', 3: 'last 3 days', 7: 'last 7 days', 30: 'last 30 days' }[activeDays] || '';
+    const periodLabel = { 1: 'last 24h', 3: 'last 3 days', 7: 'last 7 days', 30: 'last 30 days', 60: 'last 60 days' }[activeDays] || '';
     document.getElementById('pv-title').textContent = clientName + ' — Pages';
     document.getElementById('pv-sub').textContent = _pagesData.length + ' pages · ' + periodLabel;
 
-    const botSel = document.getElementById('pv-bot-select');
-    botSel.innerHTML = '<option value="">All Bots</option>';
-    _botsData.forEach(b => {
-      const o = document.createElement('option');
-      o.value = b.bot_name;
-      o.textContent = b.bot_name + ' (' + b.hits.toLocaleString() + ' hits)';
-      botSel.appendChild(o);
-    });
-    botSel.value = _activePvBot;
+    // Reset to pages tab
+    switchPvTab('pages');
+    renderBotPills();
+    renderPagesView(_pagesData, '');
+  }
 
-    renderPagesView(_pagesData, _activePvBot);
+  function renderBotPills() {
+    const row = document.getElementById('pv-bot-pills');
+    const pills = [{ bot_name: '', label: 'All Bots' }, ..._botsData.map(b => ({ bot_name: b.bot_name, label: b.bot_name + ' · ' + b.hits.toLocaleString() }))];
+    row.innerHTML = pills.map(b => {
+      const c = b.bot_name ? botColor(b.bot_name) : 'var(--muted2)';
+      const active = _activePvBot === b.bot_name ? ' active' : '';
+      const dot = b.bot_name ? `<span class="pill-dot" style="background:${c}"></span>` : '';
+      return `<button class="bot-pill${active}" onclick="setPvBot('${escHtml(b.bot_name)}')">${dot}${escHtml(b.label)}</button>`;
+    }).join('');
+  }
+
+  function setPvBot(botName) {
+    _activePvBot = botName;
+    renderBotPills();
+    renderPagesView(_pagesData, botName);
   }
 
   function closePagesView() {
     document.getElementById('pages-view').style.display = 'none';
     document.getElementById('dashboard').style.display = 'block';
     _activePvBot = '';
-  }
-
-  function applyPageBotFilter() {
-    _activePvBot = document.getElementById('pv-bot-select').value;
-    renderPagesView(_pagesData, _activePvBot);
   }
 
   function renderPagesView(allPages, botFilter) {
@@ -936,15 +1145,14 @@
           <span style="width:5px;height:5px;border-radius:50%;background:${c};flex-shrink:0"></span>${escHtml(b.bot_name.replace('Bot','').replace('-Extended',''))} ${b.hits}
         </span>`;
       }).join('');
-      return `<tr>
+      return `<tr style="cursor:pointer" onclick="openPdp('${escHtml(p.url)}', '${escHtml(fullUrl)}')">
         <td class="pg-rank">${rank}</td>
         <td class="pg-move">${move}</td>
         <td class="pg-title-cell">
           <div class="pg-title loading" id="title-${i}" data-url="${escHtml(fullUrl)}">Loading…</div>
-          <a href="${escHtml(fullUrl)}" target="_blank" rel="noopener" class="pg-url-link">
+          <span class="pg-url-link" style="cursor:pointer;pointer-events:none">
             ${escHtml(p.url)}
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 19H5V5h7V3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></svg>
-          </a>
+          </span>
         </td>
         <td class="pg-hits-cell">
           ${p.hits.toLocaleString()}
@@ -954,6 +1162,176 @@
         <td>${!botFilter ? trendBadge(p.hits, p.previous_hits) : '—'}</td>
       </tr>`;
     }).join('');
+  }
+
+  // ── PAGE DETAIL PANEL ──
+  function openPdp(url, fullUrl) {
+    const panel = document.getElementById('page-detail-panel');
+    document.getElementById('pdp-title').textContent = 'Loading…';
+    document.getElementById('pdp-url').href = fullUrl;
+    document.getElementById('pdp-url').textContent = url;
+    document.getElementById('pdp-stats').innerHTML = '<div class="empty">Loading…</div>';
+    document.getElementById('pdp-timeline').innerHTML = '';
+    document.getElementById('pdp-hourly').innerHTML = '';
+    document.getElementById('pdp-bots').innerHTML = '';
+    panel.classList.add('open');
+
+    const clientId = document.getElementById('client-select').value;
+    fetch('/api/page-detail/' + clientId + '?url=' + encodeURIComponent(url) + '&days=' + activeDays, { headers: authHeaders() })
+      .then(r => r.json())
+      .then(data => renderPdp(data, fullUrl))
+      .catch(() => { document.getElementById('pdp-stats').innerHTML = '<div class="empty">Failed to load</div>'; });
+  }
+
+  function closePdp() {
+    document.getElementById('page-detail-panel').classList.remove('open');
+  }
+
+  function formatInterval(hours) {
+    if (hours === null) return 'Only 1 visit';
+    if (hours < 1) return 'Every ~' + Math.round(hours * 60) + 'm';
+    if (hours < 24) return 'Every ~' + Math.round(hours) + 'h';
+    return 'Every ~' + (hours / 24).toFixed(1) + 'd';
+  }
+
+  function renderPdp(data, fullUrl) {
+    // Title fetch
+    if (_clientDomain) {
+      fetch('/api/page-title?url=' + encodeURIComponent(fullUrl), { headers: authHeaders() })
+        .then(r => r.json())
+        .then(t => {
+          if (t.title) document.getElementById('pdp-title').textContent = t.title;
+        }).catch(() => {});
+    } else {
+      document.getElementById('pdp-title').textContent = data.url === '/' ? 'Home' : data.url;
+    }
+
+    // Stats row
+    const topBot = (data.byBot[0] || {});
+    document.getElementById('pdp-stats').innerHTML = `
+      <div class="pdp-stat"><div class="pdp-stat-val">${data.total_hits.toLocaleString()}</div><div class="pdp-stat-lbl">Total Hits</div></div>
+      <div class="pdp-stat"><div class="pdp-stat-val">${data.byBot.length}</div><div class="pdp-stat-lbl">Unique Bots</div></div>
+      <div class="pdp-stat"><div class="pdp-stat-val">${topBot.bot_name ? escHtml(topBot.bot_name.replace('Bot','').replace('-Extended','')) : '—'}</div><div class="pdp-stat-lbl">Top Crawler</div></div>
+    `;
+
+    // Daily timeline
+    const maxDay = Math.max(...data.overTime.map(d => d.hits), 1);
+    document.getElementById('pdp-timeline').innerHTML = data.overTime.length
+      ? data.overTime.map(d => {
+          const h = Math.max(4, Math.round((d.hits / maxDay) * 56));
+          const lbl = d.date.slice(5); // MM-DD
+          return `<div class="pdp-tbar-wrap"><div class="pdp-tbar" style="height:${h}px" title="${d.date}: ${d.hits} hits"></div><div class="pdp-tbar-lbl">${lbl}</div></div>`;
+        }).join('')
+      : '<div class="empty">No data</div>';
+
+    // Hourly heatmap
+    const maxHour = Math.max(...data.hourlyPattern, 1);
+    document.getElementById('pdp-hourly').innerHTML = data.hourlyPattern.map((v, i) => {
+      const h = Math.max(2, Math.round((v / maxHour) * 46));
+      return `<div class="pdp-hbar" style="height:${h}px;opacity:${v ? 0.6 + (v/maxHour)*0.4 : 0.15}" title="${i}:00 — ${v} hits"></div>`;
+    }).join('');
+
+    // Per-bot rows
+    document.getElementById('pdp-bots').innerHTML = data.byBot.length
+      ? data.byBot.map(b => {
+          const c = botColor(b.bot_name);
+          const interval = formatInterval(b.avg_interval_hours);
+          const lastSeen = timeAgo(b.last_seen);
+          return `<div class="pdp-bot-row">
+            <span style="width:10px;height:10px;border-radius:50%;background:${c};flex-shrink:0"></span>
+            <div style="flex:1">
+              <div style="font-weight:600;font-size:13px">${escHtml(b.bot_name)}</div>
+              <div class="pdp-bot-meta">${interval} · last seen ${lastSeen}</div>
+            </div>
+            <div style="text-align:right">
+              <div class="pdp-bot-hits">${b.hits}</div>
+              <div class="pdp-bot-meta">hits</div>
+            </div>
+          </div>`;
+        }).join('')
+      : '<div class="empty">No bot data</div>';
+  }
+
+  // ── CADENCE VIEW ──
+  let _cadenceLoaded = false;
+  let _cadenceData = null;
+
+  function loadCadenceView() {
+    if (_cadenceLoaded) { renderCadenceCards(_cadenceData); return; }
+    document.getElementById('cadence-loading').style.display = 'block';
+    document.getElementById('cadence-cards').innerHTML = '';
+
+    const clientId = document.getElementById('client-select').value;
+    const periodLabel = { 1: 'last 24h', 3: 'last 3d', 7: 'last 7d', 30: 'last 30d', 60: 'last 60d' }[activeDays] || '';
+    document.getElementById('cadence-label').textContent = periodLabel;
+
+    fetch('/api/cadence/' + clientId + '?days=' + activeDays, { headers: authHeaders() })
+      .then(r => r.json())
+      .then(data => {
+        _cadenceLoaded = true;
+        _cadenceData = data;
+        renderCadenceCards(data);
+      })
+      .catch(() => { document.getElementById('cadence-loading').textContent = 'Failed to load cadence data.'; });
+  }
+
+  function renderCadenceCards(data) {
+    document.getElementById('cadence-loading').style.display = 'none';
+    if (!data || !data.cadence.length) {
+      document.getElementById('cadence-cards').innerHTML = '<div class="empty">No cadence data for this period</div>';
+      return;
+    }
+
+    document.getElementById('cadence-cards').innerHTML = '<div class="cadence-grid">' + data.cadence.map(b => {
+      const c = botColor(b.bot_name);
+      const interval = formatInterval(b.avg_interval_hours);
+      const vpd = b.visits_per_day.toFixed(1);
+      const peakHourStr = b.peak_hour < 12
+        ? b.peak_hour + ':00 AM' : (b.peak_hour === 12 ? '12:00 PM' : (b.peak_hour - 12) + ':00 PM');
+
+      // Build cadence insight text
+      let insight = b.bot_name + ' crawled this site ';
+      if (b.avg_interval_hours === null) {
+        insight += 'once during this period.';
+      } else if (b.avg_interval_hours < 1) {
+        insight += 'very frequently — roughly every ' + Math.round(b.avg_interval_hours * 60) + ' minutes.';
+      } else if (b.avg_interval_hours < 24) {
+        insight += 'roughly every ' + Math.round(b.avg_interval_hours) + ' hours (' + vpd + ' visits/day).';
+      } else {
+        insight += 'approximately every ' + (b.avg_interval_hours / 24).toFixed(1) + ' days.';
+      }
+      insight += ' Most active around ' + peakHourStr + '.';
+
+      // Hourly bar chart
+      const maxH = Math.max(...b.hourly_pattern, 1);
+      const hourBars = b.hourly_pattern.map((v, i) => {
+        const h = Math.max(2, Math.round((v / maxH) * 34));
+        return `<div class="cadence-hour-bar" style="height:${h}px;background:${c};opacity:${v ? 0.5 + (v/maxH)*0.5 : 0.1}" title="${i}:00 — ${v}"></div>`;
+      }).join('');
+
+      const topPagesHtml = b.top_pages.slice(0, 3).map(p =>
+        `<div class="cadence-page-row"><span class="cadence-page-url">${escHtml(p.url)}</span><span class="cadence-page-hits">${p.hits}</span></div>`
+      ).join('');
+
+      return `<div class="cadence-card">
+        <div class="cadence-card-header">
+          <span style="width:10px;height:10px;border-radius:50%;background:${c};flex-shrink:0"></span>
+          <span class="cadence-bot-name">${escHtml(b.bot_name)}</span>
+          <div style="margin-left:auto;text-align:right">
+            <div class="cadence-total">${b.total_hits.toLocaleString()}</div>
+            <div class="cadence-total-label">total hits</div>
+          </div>
+        </div>
+        <div class="cadence-stats">
+          <div class="cadence-stat"><div class="cadence-stat-val" style="color:${c}">${interval.replace('Every ~','').replace('Only 1 visit','1x')}</div><div class="cadence-stat-lbl">Avg Interval</div></div>
+          <div class="cadence-stat"><div class="cadence-stat-val">${vpd}</div><div class="cadence-stat-lbl">Visits/Day</div></div>
+          <div class="cadence-stat"><div class="cadence-stat-val">${peakHourStr.split(':')[0]}<span style="font-size:11px;font-weight:400">${peakHourStr.includes('AM')?'am':'pm'}</span></div><div class="cadence-stat-lbl">Peak Hour</div></div>
+        </div>
+        <div class="cadence-hourly">${hourBars}</div>
+        <div class="cadence-insight">${insight}</div>
+        ${topPagesHtml ? `<div class="cadence-top-pages"><div class="cadence-top-pages-title">Top Pages</div>${topPagesHtml}</div>` : ''}
+      </div>`;
+    }).join('') + '</div>';
   }
 
   async function loadPageTitles(pages) {
