@@ -1,0 +1,70 @@
+Then in Replit, replace the addClient function and the modal HTML in public/index.html.
+Replace the modal div with this:
+html<div class="modal" id="add-client-modal">
+  <div class="modal-box">
+    <h2>Add Client</h2>
+    <input type="text" id="new-client-name" placeholder="Client name (e.g. Damira Dental)" />
+    <input type="text" id="new-client-domain" placeholder="Domain (e.g. saloniris.co.uk)" />
+    <select id="new-client-method" style="margin-bottom:12px">
+      <option value="cloudflare">Cloudflare Worker</option>
+      <option value="php">PHP / .htaccess</option>
+    </select>
+    <div class="modal-actions">
+      <button onclick="addClient()">Add Client</button>
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+    </div>
+    <div id="new-api-key" style="margin-top:16px;display:none">
+      <p style="font-size:13px;color:#64748b;margin-bottom:6px">API Key:</p>
+      <div class="api-key" id="api-key-display"></div>
+      <div id="setup-instructions" style="margin-top:16px;font-size:13px;color:#94a3b8;line-height:1.6"></div>
+    </div>
+  </div>
+</div>
+Replace the addClient function in the script block with this:
+javascriptfunction addClient() {
+  const name = document.getElementById('new-client-name').value;
+  const domain = document.getElementById('new-client-domain').value;
+  const tracking_method = document.getElementById('new-client-method').value;
+
+  fetch('/api/clients', {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ name, domain, tracking_method })
+  }).then(r => r.json()).then(client => {
+    document.getElementById('api-key-display').textContent = client.api_key;
+    document.getElementById('new-api-key').style.display = 'block';
+
+    const instructions = document.getElementById('setup-instructions');
+    if (tracking_method === 'cloudflare') {
+      instructions.innerHTML = `
+        <strong>Cloudflare Worker setup:</strong><br>
+        1. Go to Cloudflare → Workers → Create Worker<br>
+        2. Paste the worker script<br>
+        3. Set <code>CLIENT_API_KEY</code> to the key above<br>
+        4. Add a route for <code>${domain}/*</code>
+      `;
+    } else {
+      instructions.innerHTML = `
+        <strong>PHP / .htaccess setup:</strong><br>
+        1. Upload <code>bot-tracker.php</code> to site root<br>
+        2. Set <code>CLIENT_API_KEY</code> to the key above<br>
+        3. Add to top of <code>.htaccess</code>:<br>
+        <code>php_value auto_prepend_file "/home/USERNAME/public_html/bot-tracker.php"</code>
+      `;
+    }
+  });
+}
+Then in server.js update the POST /api/clients route to include tracking_method:
+javascriptapp.post('/api/clients', auth, async (req, res) => {
+  const { name, domain, tracking_method } = req.body;
+  const api_key = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+  try {
+    const result = await pool.query(
+      'INSERT INTO clients (name, domain, api_key, tracking_method) VALUES ($1, $2, $3, $4) RETURNING *',
+      [name, domain, api_key, tracking_method || 'cloudflare']
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
