@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { clientsTable } from "@workspace/db/schema";
+import { clientsTable, botHitsTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { auth } from "./auth";
 
@@ -50,6 +50,7 @@ router.post("/clients", auth, async (req, res) => {
 router.delete("/clients/:id", auth, async (req, res) => {
   const id = parseInt(req.params.id);
   try {
+    await db.delete(botHitsTable).where(eq(botHitsTable.client_id, id));
     await db.delete(clientsTable).where(eq(clientsTable.id, id));
     res.json({ success: true });
   } catch (err) {

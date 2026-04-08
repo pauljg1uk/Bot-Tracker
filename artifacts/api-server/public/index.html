@@ -262,26 +262,37 @@
 <!-- Add Client Modal -->
 <div class="modal" id="add-client-modal">
   <div class="modal-box">
-    <h2>Add Client</h2>
-    <p class="modal-sub">Create a new client and get their tracking API key.</p>
-    <div class="field-label">Client Name</div>
-    <input type="text" id="new-client-name" placeholder="e.g. Damira Dental" />
-    <div class="field-label">Domain</div>
-    <input type="text" id="new-client-domain" placeholder="e.g. damira.co.uk" />
-    <div class="field-label">Tracking Method</div>
-    <select id="new-client-method" style="width:100%;margin-bottom:16px">
-      <option value="cloudflare">Cloudflare Worker</option>
-      <option value="php">PHP / .htaccess</option>
-    </select>
-    <div class="modal-actions">
-      <button class="btn-primary" onclick="addClient()">Create Client</button>
-      <button class="btn-ghost" onclick="closeModal('add-client-modal')">Cancel</button>
+    <h2 id="add-client-title">Add Client</h2>
+    <p class="modal-sub" id="add-client-sub">Create a new client and get their tracking API key.</p>
+
+    <div id="add-client-form">
+      <div class="field-label">Client Name</div>
+      <input type="text" id="new-client-name" placeholder="e.g. Damira Dental" />
+      <div class="field-label">Domain</div>
+      <input type="text" id="new-client-domain" placeholder="e.g. damira.co.uk" />
+      <div class="field-label">Tracking Method</div>
+      <select id="new-client-method" style="width:100%;margin-bottom:16px">
+        <option value="cloudflare">Cloudflare Worker</option>
+        <option value="php">PHP / .htaccess</option>
+      </select>
+      <div class="modal-actions">
+        <button class="btn-primary" id="create-client-btn" onclick="addClient()">Create Client</button>
+        <button class="btn-ghost" onclick="closeModal('add-client-modal')">Cancel</button>
+      </div>
     </div>
-    <div class="api-key-box" id="new-api-key">
-      <div class="label">API Key</div>
-      <div class="api-key" id="api-key-display"></div>
-      <button class="copy-btn" onclick="copyApiKey()">Copy Key</button>
-      <div id="setup-instructions" style="margin-top:16px;font-size:13px;color:var(--muted2);line-height:1.7;border-top:1px solid var(--border);padding-top:14px;display:none"></div>
+
+    <div id="add-client-result" style="display:none">
+      <div class="api-key-box" id="new-api-key" style="display:block">
+        <div class="label">API Key</div>
+        <div class="api-key" id="api-key-display"></div>
+        <button class="copy-btn" onclick="copyApiKey()">Copy Key</button>
+      </div>
+      <div id="setup-instructions" style="margin-top:16px;font-size:13px;color:var(--muted2);line-height:1.7;border-top:1px solid var(--border);padding-top:14px"></div>
+      <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <button class="btn-sm" onclick="sendTestHit()" id="test-hit-btn">Send Test Hit</button>
+        <span id="test-hit-result" style="font-size:13px;font-weight:500"></span>
+        <button class="btn-ghost" onclick="closeModal('add-client-modal')" style="margin-left:auto;padding:7px 18px">Done</button>
+      </div>
     </div>
   </div>
 </div>
@@ -421,12 +432,17 @@
   }
 
   function openAddClient() {
-    document.getElementById('new-api-key').style.display = 'none';
     document.getElementById('new-client-name').value = '';
     document.getElementById('new-client-domain').value = '';
     document.getElementById('new-client-method').value = 'cloudflare';
-    document.getElementById('setup-instructions').style.display = 'none';
-    document.getElementById('setup-instructions').innerHTML = '';
+    document.getElementById('add-client-form').style.display = 'block';
+    document.getElementById('add-client-result').style.display = 'none';
+    document.getElementById('add-client-title').textContent = 'Add Client';
+    document.getElementById('add-client-sub').textContent = 'Create a new client and get their tracking API key.';
+    document.getElementById('test-hit-result').textContent = '';
+    document.getElementById('test-hit-result').style.color = '';
+    document.getElementById('test-hit-btn').disabled = false;
+    document.getElementById('test-hit-btn').textContent = 'Send Test Hit';
     document.getElementById('add-client-modal').classList.add('open');
   }
 
@@ -471,21 +487,29 @@
     document.getElementById(id).classList.remove('open');
   }
 
+  let _currentApiKey = null;
+
   function addClient() {
     const name = document.getElementById('new-client-name').value.trim();
     const domain = document.getElementById('new-client-domain').value.trim();
     const tracking_method = document.getElementById('new-client-method').value;
     if (!name || !domain) return;
+    const btn = document.getElementById('create-client-btn');
+    btn.disabled = true;
+    btn.textContent = 'Creating…';
     fetch('/api/clients', {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify({ name, domain, tracking_method })
     }).then(r => r.json()).then(client => {
+      _currentApiKey = client.api_key;
       document.getElementById('api-key-display').textContent = client.api_key;
-      document.getElementById('new-api-key').style.display = 'block';
+      document.getElementById('add-client-title').textContent = `${escHtml(name)} created`;
+      document.getElementById('add-client-sub').textContent = 'Copy the API key and follow the setup steps below.';
+      document.getElementById('add-client-form').style.display = 'none';
+      document.getElementById('add-client-result').style.display = 'block';
 
       const instructions = document.getElementById('setup-instructions');
-      instructions.style.display = 'block';
 
       const code = (t) => `<code style="background:var(--bg);border:1px solid var(--border);padding:1px 6px;border-radius:4px;font-size:11px;color:var(--green-text);font-family:monospace">${escHtml(t)}</code>`;
       const step = (n, html) => `<div style="display:flex;gap:10px;margin-bottom:10px"><span style="flex-shrink:0;width:20px;height:20px;background:var(--green-bg);border:1px solid var(--border);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--green-text)">${n}</span><div>${html}</div></div>`;
@@ -530,6 +554,43 @@
       const confirm = document.getElementById('copy-confirm');
       confirm.style.display = 'inline';
       setTimeout(() => { confirm.style.display = 'none'; }, 2000);
+    });
+  }
+
+  function sendTestHit() {
+    if (!_currentApiKey) return;
+    const btn = document.getElementById('test-hit-btn');
+    const result = document.getElementById('test-hit-result');
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+    result.textContent = '';
+    fetch('/api/hit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        api_key: _currentApiKey,
+        url: '/test-page',
+        bot_name: 'GPTBot',
+        user_agent: 'Mozilla/5.0 AppleWebKit/537.36 (compatible; GPTBot/1.0)',
+        status_code: 200,
+        country: 'GB',
+        referrer: null
+      })
+    }).then(r => r.json()).then(data => {
+      if (data.success) {
+        result.textContent = '✓ Test hit received — tracking is working!';
+        result.style.color = 'var(--green)';
+      } else {
+        result.textContent = '✗ ' + (data.error || 'Unexpected response');
+        result.style.color = 'var(--red)';
+        btn.disabled = false;
+        btn.textContent = 'Retry';
+      }
+    }).catch(() => {
+      result.textContent = '✗ Network error — check the server is running';
+      result.style.color = 'var(--red)';
+      btn.disabled = false;
+      btn.textContent = 'Retry';
     });
   }
 
